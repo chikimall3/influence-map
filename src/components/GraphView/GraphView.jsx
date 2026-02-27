@@ -95,8 +95,30 @@ export default function GraphView({ rootArtistId, onSelectArtist }) {
     // Ensure zoom stays disabled during SZ mode
     cy.userZoomingEnabled(false)
 
-    // Only fit camera on initial activation (not on every wheel scroll)
+    // On initial activation: arrange ALL neighbors in centered tree, then fit
     if (fit && !isLayoutRunningRef.current) {
+      // Position focus node at center, neighbors in rows below
+      const ext = cy.extent()
+      const centerX = (ext.x1 + ext.x2) / 2
+      const centerY = (ext.y1 + ext.y2) / 2
+      const rowSpacing = 120
+      const colSpacing = 100
+      const cols = Math.max(3, Math.ceil(Math.sqrt(sorted.length)))
+
+      // Move focus node to top center
+      selectedNode.position({ x: centerX, y: centerY - rowSpacing })
+
+      // Arrange ALL neighbors (sorted by importance) in rows below
+      sorted.forEach((node, i) => {
+        const row = Math.floor(i / cols)
+        const colCount = Math.min(cols, sorted.length - row * cols)
+        const col = i % cols
+        const rowWidth = (colCount - 1) * colSpacing
+        const x = centerX - rowWidth / 2 + col * colSpacing
+        const y = centerY + row * rowSpacing
+        node.position({ x, y })
+      })
+
       clearTimeout(fitTimerRef.current)
       szFittingRef.current = true
       fitTimerRef.current = setTimeout(() => {
