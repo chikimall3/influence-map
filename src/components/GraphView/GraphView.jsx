@@ -57,8 +57,29 @@ export default function GraphView({ rootArtistId, onSelectArtist }) {
       (b.data('connectionCount') || b.degree()) - (a.data('connectionCount') || a.degree())
     )
 
-    const visibleNeighborIds = new Set(sorted.slice(0, maxVisible).map(n => n.id()))
-    const hiddenNeighborIds = new Set(sorted.slice(maxVisible).map(n => n.id()))
+    // Separate influencers vs influenced BEFORE filtering
+    const allInfluencers = []
+    const allInfluenced = []
+    sorted.forEach(node => {
+      const hasEdgeToSelected = cy.edges().some(e =>
+        e.source().id() === node.id() && e.target().id() === selectedId
+      )
+      if (hasEdgeToSelected) {
+        allInfluencers.push(node)
+      } else {
+        allInfluenced.push(node)
+      }
+    })
+
+    // Influencers: always show ALL. Filter only applies to influenced.
+    const visibleInfluenced = allInfluenced.slice(0, maxVisible)
+    const hiddenInfluenced = allInfluenced.slice(maxVisible)
+
+    const visibleNeighborIds = new Set([
+      ...allInfluencers.map(n => n.id()),
+      ...visibleInfluenced.map(n => n.id()),
+    ])
+    const hiddenNeighborIds = new Set(hiddenInfluenced.map(n => n.id()))
     const fullyVisible = new Set([selectedId, ...visibleNeighborIds])
 
     cy.batch(() => {
@@ -100,30 +121,10 @@ export default function GraphView({ rootArtistId, onSelectArtist }) {
       const vertSpacing = 140
       const colSpacing = 100
 
-      // On initial tap: use viewport center. On wheel: use focus node's stable position.
+      // Use focus node's current position as stable anchor
       const focusPos = selectedNode.position()
-      const centerX = fit ? (cy.extent().x1 + cy.extent().x2) / 2 : focusPos.x
-      const centerY = fit ? (cy.extent().y1 + cy.extent().y2) / 2 : focusPos.y
-
-      // Only reposition visible neighbors
-      const visibleSorted = sorted.slice(0, maxVisible)
-
-      // Separate influencers (source→selected) vs influenced (selected→target)
-      const influencers = []
-      const influenced = []
-      visibleSorted.forEach(node => {
-        const hasEdgeToSelected = cy.edges().some(e =>
-          e.source().id() === node.id() && e.target().id() === selectedId
-        )
-        if (hasEdgeToSelected) {
-          influencers.push(node)
-        } else {
-          influenced.push(node)
-        }
-      })
-
-      // Place focus node at center
-      selectedNode.position({ x: centerX, y: centerY })
+      const centerX = focusPos.x
+      const centerY = focusPos.y
 
       // Place nodes from center outward: 0=center, 1=right, 2=left, 3=right2, ...
       const centerOutward = (nodes, cx, rowY) => {
@@ -138,37 +139,27 @@ export default function GraphView({ rootArtistId, onSelectArtist }) {
         })
       }
 
-      // Influencers: row above, spreading from center
-      if (influencers.length > 0) {
-        centerOutward(influencers, centerX, centerY - vertSpacing)
+      // Influencers: row above (always all shown)
+      if (allInfluencers.length > 0) {
+        centerOutward(allInfluencers, centerX, centerY - vertSpacing)
       }
 
-      // Influenced: row below, spreading from center
-      if (influenced.length > 0) {
-        centerOutward(influenced, centerX, centerY + vertSpacing)
+      // Influenced: row below (filtered by maxVisible)
+      if (visibleInfluenced.length > 0) {
+        centerOutward(visibleInfluenced, centerX, centerY + vertSpacing)
       }
 
-      // Only fit viewport on initial activation (tap), NOT on every wheel scroll
+      // On initial tap, center view on the visible nodes (pan only, no zoom change)
       if (fit) {
         clearTimeout(fitTimerRef.current)
-        szFittingRef.current = true
         fitTimerRef.current = setTimeout(() => {
           const visibleNodes = cy.nodes('.sz-focus, .sz-neighbor')
           if (visibleNodes.length > 0) {
             cy.stop()
-            cy.animate({
-              fit: { eles: visibleNodes, padding: 50 },
-              duration: 300,
-              easing: 'ease-out',
-              complete: () => {
-                szLockedZoomRef.current = cy.zoom()
-                szFittingRef.current = false
-              },
-            })
-          } else {
-            szFittingRef.current = false
+            cy.center(visibleNodes)
+            szLockedZoomRef.current = cy.zoom()
           }
-        }, 150)
+        }, 100)
       }
     }
   }, [])
