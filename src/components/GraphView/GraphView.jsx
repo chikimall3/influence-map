@@ -95,18 +95,21 @@ export default function GraphView({ rootArtistId, onSelectArtist }) {
     // Ensure zoom stays disabled during SZ mode
     cy.userZoomingEnabled(false)
 
-    // On initial activation: arrange neighbors — influencers above, influenced below
-    if (fit && !isLayoutRunningRef.current) {
+    // Always re-layout visible neighbors in centered tree form
+    if (!isLayoutRunningRef.current) {
       const ext = cy.extent()
       const centerX = (ext.x1 + ext.x2) / 2
       const centerY = (ext.y1 + ext.y2) / 2
       const vertSpacing = 140
       const colSpacing = 100
 
+      // Only reposition visible neighbors (sorted already has all, slice to maxVisible)
+      const visibleSorted = sorted.slice(0, maxVisible)
+
       // Separate influencers (source→selected) vs influenced (selected→target)
       const influencers = []
       const influenced = []
-      sorted.forEach(node => {
+      visibleSorted.forEach(node => {
         const hasEdgeToSelected = cy.edges().some(e =>
           e.source().id() === node.id() && e.target().id() === selectedId
         )
@@ -120,26 +123,23 @@ export default function GraphView({ rootArtistId, onSelectArtist }) {
       // Place focus node at center
       selectedNode.position({ x: centerX, y: centerY })
 
-      // Influencers: single row above, centered
-      if (influencers.length > 0) {
-        const totalW = (influencers.length - 1) * colSpacing
-        influencers.forEach((node, i) => {
-          node.position({
-            x: centerX - totalW / 2 + i * colSpacing,
-            y: centerY - vertSpacing,
-          })
+      // Place nodes from center outward: index 0 at center, 1 right, 2 left, ...
+      const centerOutward = (nodes, cx, rowY) => {
+        nodes.forEach((node, i) => {
+          const ring = Math.ceil((i + 1) / 2)
+          const side = i === 0 ? 0 : (i % 2 === 1 ? 1 : -1)
+          node.position({ x: cx + side * ring * colSpacing, y: rowY })
         })
       }
 
-      // Influenced: single row below, centered
+      // Influencers: row above, spreading from center
+      if (influencers.length > 0) {
+        centerOutward(influencers, centerX, centerY - vertSpacing)
+      }
+
+      // Influenced: row below, spreading from center
       if (influenced.length > 0) {
-        const totalW = (influenced.length - 1) * colSpacing
-        influenced.forEach((node, i) => {
-          node.position({
-            x: centerX - totalW / 2 + i * colSpacing,
-            y: centerY + vertSpacing,
-          })
-        })
+        centerOutward(influenced, centerX, centerY + vertSpacing)
       }
 
       clearTimeout(fitTimerRef.current)
