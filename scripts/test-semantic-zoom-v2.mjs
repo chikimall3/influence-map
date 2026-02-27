@@ -370,9 +370,10 @@ async function run() {
   )
 
   // -----------------------------------------------------------------------
-  // TEST 8: Viewport stability after node tap (no shaking)
+  // TEST 8: No oscillation during node tap transition
+  //   Sample viewport every 50ms for 2s, count direction reversals in pan.x
+  //   Allow at most 1 reversal (initial movement + settle).
   // -----------------------------------------------------------------------
-  // Re-enter semantic zoom by tapping a non-root node
   const tapResult2 = await page.evaluate(() => {
     const cy = document.querySelector('.graph-view')._cyreg.cy
     const nonRoot = cy.nodes().filter(n => !n.data('isRoot'))
@@ -382,42 +383,50 @@ async function run() {
     return { ok: true, label: target.data('label') }
   })
 
-  // Wait for ALL animations to fully complete (layout 400ms + debounce 150ms + fit 300ms + margin)
-  await sleep(1500)
-
   if (!tapResult2.ok) {
-    record('TEST 8: Viewport stable after node tap', false, tapResult2.reason)
+    record('TEST 8: No oscillation during tap transition', false, tapResult2.reason)
   } else {
-    // Sample viewport at two points separated by 500ms — if stable, they should match
-    const snap1 = await page.evaluate(() => {
-      const cy = document.querySelector('.graph-view')._cyreg.cy
-      const p = cy.pan()
-      return { px: Math.round(p.x * 100) / 100, py: Math.round(p.y * 100) / 100, z: Math.round(cy.zoom() * 1000) / 1000 }
-    })
+    // Sample viewport at 50ms intervals for 2 seconds
+    const samples = []
+    for (let i = 0; i < 40; i++) {
+      const snap = await page.evaluate(() => {
+        const cy = document.querySelector('.graph-view')._cyreg.cy
+        const p = cy.pan()
+        return { x: p.x, y: p.y, z: cy.zoom() }
+      })
+      samples.push(snap)
+      await sleep(50)
+    }
 
-    await sleep(600)
+    // Count direction reversals in pan.x
+    let reversals = 0
+    let lastDir = 0
+    for (let i = 1; i < samples.length; i++) {
+      const dx = samples[i].x - samples[i - 1].x
+      if (Math.abs(dx) < 0.5) continue // ignore noise
+      const dir = dx > 0 ? 1 : -1
+      if (lastDir !== 0 && dir !== lastDir) reversals++
+      lastDir = dir
+    }
 
-    const snap2 = await page.evaluate(() => {
-      const cy = document.querySelector('.graph-view')._cyreg.cy
-      const p = cy.pan()
-      return { px: Math.round(p.x * 100) / 100, py: Math.round(p.y * 100) / 100, z: Math.round(cy.zoom() * 1000) / 1000 }
-    })
+    // Also check final stability (last 5 samples should be identical)
+    const last5 = samples.slice(-5)
+    const finalStable = last5.every(s =>
+      Math.abs(s.x - last5[0].x) < 1 && Math.abs(s.y - last5[0].y) < 1
+    )
 
-    const panDrift = Math.abs(snap1.px - snap2.px) + Math.abs(snap1.py - snap2.py)
-    const zoomDrift = Math.abs(snap1.z - snap2.z)
-    const isStable = panDrift < 1 && zoomDrift < 0.01
-
+    const passed = reversals <= 1 && finalStable
     record(
-      'TEST 8: Viewport stable after node tap',
-      isStable,
-      `snap1=(${snap1.px},${snap1.py},z${snap1.z}) snap2=(${snap2.px},${snap2.py},z${snap2.z}) drift=pan:${panDrift.toFixed(2)},zoom:${zoomDrift.toFixed(4)}`
+      'TEST 8: No oscillation during tap transition',
+      passed,
+      `reversals=${reversals} (max 1), finalStable=${finalStable}, samples=${samples.length}`
     )
   }
 
   // -----------------------------------------------------------------------
-  // TEST 9: Viewport stability after rapid wheel events (no shaking)
+  // TEST 9: No oscillation during rapid wheel scroll
   // -----------------------------------------------------------------------
-  // Send 5 rapid wheel events
+  // Fire 5 rapid wheel events, then sample for 1.5s
   await page.evaluate(() => {
     const container = document.querySelector('.graph-view')
     for (let i = 0; i < 5; i++) {
@@ -427,31 +436,36 @@ async function run() {
     }
   })
 
-  // Wait for debounce (150ms) + fit animation (300ms) + margin
-  await sleep(1000)
+  const wSamples = []
+  for (let i = 0; i < 30; i++) {
+    const snap = await page.evaluate(() => {
+      const cy = document.querySelector('.graph-view')._cyreg.cy
+      const p = cy.pan()
+      return { x: p.x, y: p.y, z: cy.zoom() }
+    })
+    wSamples.push(snap)
+    await sleep(50)
+  }
 
-  const wSnap1 = await page.evaluate(() => {
-    const cy = document.querySelector('.graph-view')._cyreg.cy
-    const p = cy.pan()
-    return { px: Math.round(p.x * 100) / 100, py: Math.round(p.y * 100) / 100, z: Math.round(cy.zoom() * 1000) / 1000 }
-  })
+  let wReversals = 0
+  let wLastDir = 0
+  for (let i = 1; i < wSamples.length; i++) {
+    const dx = wSamples[i].x - wSamples[i - 1].x
+    if (Math.abs(dx) < 0.5) continue
+    const dir = dx > 0 ? 1 : -1
+    if (wLastDir !== 0 && dir !== wLastDir) wReversals++
+    wLastDir = dir
+  }
 
-  await sleep(600)
-
-  const wSnap2 = await page.evaluate(() => {
-    const cy = document.querySelector('.graph-view')._cyreg.cy
-    const p = cy.pan()
-    return { px: Math.round(p.x * 100) / 100, py: Math.round(p.y * 100) / 100, z: Math.round(cy.zoom() * 1000) / 1000 }
-  })
-
-  const wPanDrift = Math.abs(wSnap1.px - wSnap2.px) + Math.abs(wSnap1.py - wSnap2.py)
-  const wZoomDrift = Math.abs(wSnap1.z - wSnap2.z)
-  const wIsStable = wPanDrift < 1 && wZoomDrift < 0.01
+  const wLast5 = wSamples.slice(-5)
+  const wFinalStable = wLast5.every(s =>
+    Math.abs(s.x - wLast5[0].x) < 1 && Math.abs(s.y - wLast5[0].y) < 1
+  )
 
   record(
-    'TEST 9: Viewport stable after rapid wheel',
-    wIsStable,
-    `snap1=(${wSnap1.px},${wSnap1.py},z${wSnap1.z}) snap2=(${wSnap2.px},${wSnap2.py},z${wSnap2.z}) drift=pan:${wPanDrift.toFixed(2)},zoom:${wZoomDrift.toFixed(4)}`
+    'TEST 9: No oscillation during rapid wheel',
+    wReversals <= 1 && wFinalStable,
+    `reversals=${wReversals} (max 1), finalStable=${wFinalStable}, samples=${wSamples.length}`
   )
 
   // -----------------------------------------------------------------------

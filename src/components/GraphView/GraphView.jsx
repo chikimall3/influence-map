@@ -141,7 +141,7 @@ export default function GraphView({ rootArtistId, onSelectArtist }) {
     })
   }, [])
 
-  const loadArtistConnections = useCallback(async (artistId, isRoot = false) => {
+  const loadArtistConnections = useCallback(async (artistId, { isRoot = false, skipLayoutAnim = false } = {}) => {
     if (loadedNodesRef.current.has(artistId)) return
     loadedNodesRef.current.add(artistId)
 
@@ -285,7 +285,10 @@ export default function GraphView({ rootArtistId, onSelectArtist }) {
           node.data('hasChildren', false)
         }
 
-        const layout = cy.layout(LAYOUT_OPTIONS)
+        const layoutOpts = skipLayoutAnim
+          ? { ...LAYOUT_OPTIONS, animate: false }
+          : LAYOUT_OPTIONS
+        const layout = cy.layout(layoutOpts)
         isLayoutRunningRef.current = true
         layout.on('layoutstop', () => {
           isLayoutRunningRef.current = false
@@ -363,13 +366,11 @@ export default function GraphView({ rootArtistId, onSelectArtist }) {
         image_url: nodeData.image_url,
       })
 
-      if (nodeData.hasChildren !== false) {
-        await loadArtistConnections(nodeData.id)
-      }
-
-      // Path mode handling
+      // Path mode handling (load with normal animation)
       if (pathStartRef.current === 'waiting') {
-        // First click in path mode: set start
+        if (nodeData.hasChildren !== false) {
+          await loadArtistConnections(nodeData.id)
+        }
         pathStartRef.current = nodeData.id
         cy.batch(() => {
           cy.elements().removeClass('path-highlight path-start path-end path-dimmed')
@@ -379,7 +380,9 @@ export default function GraphView({ rootArtistId, onSelectArtist }) {
       }
 
       if (pathStartRef.current && pathStartRef.current !== 'waiting' && pathStartRef.current !== nodeData.id) {
-        // Second click in path mode: find path
+        if (nodeData.hasChildren !== false) {
+          await loadArtistConnections(nodeData.id)
+        }
         const startNode = cy.getElementById(pathStartRef.current)
         const endNode = node
         if (startNode.length && endNode.length) {
@@ -403,13 +406,21 @@ export default function GraphView({ rootArtistId, onSelectArtist }) {
         return
       }
 
-      // Normal mode: activate semantic zoom
+      // Normal mode: activate semantic zoom BEFORE loading
       selectedNodeRef.current = nodeData.id
       filterLevelRef.current = 0.5
       setFilterLevel(0.5)
       setSemanticZoomActive(true)
       cy.userZoomingEnabled(false)
-      applySemanticZoom(cy, nodeData.id, 0.5)
+
+      if (nodeData.hasChildren !== false) {
+        // Load with no dagre animation — layoutstop will apply SZ + fit
+        await loadArtistConnections(nodeData.id, { skipLayoutAnim: true })
+        // layoutstop already called applySemanticZoom, nothing more to do
+      } else {
+        // Already loaded, apply SZ immediately
+        applySemanticZoom(cy, nodeData.id, 0.5)
+      }
     })
 
     // Background tap: exit semantic zoom / path mode
@@ -464,7 +475,7 @@ export default function GraphView({ rootArtistId, onSelectArtist }) {
     container.addEventListener('wheel', handleWheel, { passive: false })
 
     if (rootArtistId) {
-      loadArtistConnections(rootArtistId, true)
+      loadArtistConnections(rootArtistId, { isRoot: true })
     }
 
     return () => {
