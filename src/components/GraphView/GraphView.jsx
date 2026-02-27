@@ -17,13 +17,16 @@ const LAYOUT_OPTIONS = {
   animationDuration: 400,
 }
 
-function getVisibleCount(zoomLevel) {
-  if (zoomLevel < 0.7) return 5
-  if (zoomLevel < 1.2) return 10
-  if (zoomLevel < 2.0) return 20
+// filterLevel 0.0–1.0 → visible neighbor count
+function getVisibleCount(filterLevel) {
+  if (filterLevel < 0.2) return 3
+  if (filterLevel < 0.4) return 5
+  if (filterLevel < 0.6) return 10
+  if (filterLevel < 0.8) return 20
   return Infinity
 }
 
+const FILTER_STEP = 0.15
 const SZ_CLASSES = 'sz-focus sz-neighbor sz-dimmed sz-hidden sz-visible-edge'
 
 export default function GraphView({ rootArtistId, onSelectArtist }) {
@@ -32,22 +35,22 @@ export default function GraphView({ rootArtistId, onSelectArtist }) {
   const cyRef = useRef(null)
   const loadedNodesRef = useRef(new Set())
   const selectedNodeRef = useRef(null)
-  const zoomTimerRef = useRef(null)
+  const filterLevelRef = useRef(0.5)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [nodeCount, setNodeCount] = useState(0)
   const [semanticZoomActive, setSemanticZoomActive] = useState(false)
+  const [filterLevel, setFilterLevel] = useState(0.5)
 
-  const applySemanticZoom = useCallback((cy, selectedId) => {
+  const applySemanticZoom = useCallback((cy, selectedId, level) => {
     if (!cy || !selectedId) return
 
     const selectedNode = cy.getElementById(selectedId)
     if (!selectedNode.length) return
 
-    const maxVisible = getVisibleCount(cy.zoom())
+    const maxVisible = getVisibleCount(level != null ? level : filterLevelRef.current)
     const neighborhood = selectedNode.neighborhood().nodes()
 
-    // Sort neighbors by degree descending (most connected first)
     const sorted = neighborhood.toArray().sort((a, b) =>
       (b.data('connectionCount') || b.degree()) - (a.data('connectionCount') || a.degree())
     )
@@ -59,7 +62,6 @@ export default function GraphView({ rootArtistId, onSelectArtist }) {
     cy.batch(() => {
       cy.elements().removeClass(SZ_CLASSES)
 
-      // Classify nodes
       selectedNode.addClass('sz-focus')
 
       cy.nodes().forEach(node => {
@@ -74,19 +76,15 @@ export default function GraphView({ rootArtistId, onSelectArtist }) {
         }
       })
 
-      // Classify edges based on node sets
       cy.edges().forEach(edge => {
         const srcId = edge.source().id()
         const tgtId = edge.target().id()
 
-        // If either end is hidden → hide edge
         if (hiddenNeighborIds.has(srcId) || hiddenNeighborIds.has(tgtId)) {
           edge.addClass('sz-hidden')
         } else if (fullyVisible.has(srcId) && fullyVisible.has(tgtId)) {
-          // Both ends fully visible → show edge
           edge.addClass('sz-visible-edge')
         } else {
-          // Otherwise dim (connects to dimmed nodes)
           edge.addClass('sz-dimmed')
         }
       })
@@ -99,7 +97,12 @@ export default function GraphView({ rootArtistId, onSelectArtist }) {
       cy.elements().removeClass(SZ_CLASSES)
     })
     selectedNodeRef.current = null
+    filterLevelRef.current = 0.5
+    setFilterLevel(0.5)
     setSemanticZoomActive(false)
+    // Re-enable normal zoom
+    cy.userZoomingEnabled(true)
+    cy.userPanningEnabled(true)
   }, [])
 
   const addArtistNode = useCallback((cy, artist, isRoot) => {
@@ -144,9 +147,7 @@ export default function GraphView({ rootArtistId, onSelectArtist }) {
 
       addArtistNode(cy, artist, isRoot)
 
-      // Fetch both directions in parallel
       const [influencersRes, influencedRes] = await Promise.all([
-        // Who influenced this artist (influencer → this)
         supabase
           .from('influences')
           .select(`
@@ -154,7 +155,6 @@ export default function GraphView({ rootArtistId, onSelectArtist }) {
             influencer:influencer_id (id, name, name_ja, genres, birth_year, death_year, image_url)
           `)
           .eq('influenced_id', artistId),
-        // Who this artist influenced (this → influenced)
         supabase
           .from('influences')
           .select(`
@@ -167,7 +167,6 @@ export default function GraphView({ rootArtistId, onSelectArtist }) {
       const newNodes = []
       const newEdges = []
 
-      // Process influencers (upstream)
       if (influencersRes.data) {
         for (const inf of influencersRes.data) {
           const influencer = inf.influencer
@@ -207,7 +206,6 @@ export default function GraphView({ rootArtistId, onSelectArtist }) {
         }
       }
 
-      // Process influenced (downstream)
       if (influencedRes.data) {
         for (const inf of influencedRes.data) {
           const influenced = inf.influenced
@@ -257,20 +255,17 @@ export default function GraphView({ rootArtistId, onSelectArtist }) {
 
         const layout = cy.layout(LAYOUT_OPTIONS)
         layout.on('layoutstop', () => {
-          // Update node sizes based on actual connection count
           cy.nodes().forEach(n => {
             n.data('connectionCount', n.degree())
           })
           setNodeCount(cy.nodes().length)
 
-          // Fit graph into view after layout completes
           if (isRoot) {
             cy.fit(undefined, 40)
           }
 
-          // Re-apply semantic zoom if active
           if (selectedNodeRef.current) {
-            applySemanticZoom(cy, selectedNodeRef.current)
+            applySemanticZoom(cy, selectedNodeRef.current, filterLevelRef.current)
           }
         })
         layout.run()
@@ -316,6 +311,11 @@ export default function GraphView({ rootArtistId, onSelectArtist }) {
     cyRef.current = cy
     loadedNodesRef.current = new Set()
 
+    // Expose cy for testing (dev only)
+    if (containerRef.current) {
+      containerRef.current.__cy = cy
+    }
+
     cy.on('tap', 'node', async (evt) => {
       const node = evt.target
       const nodeData = node.data()
@@ -338,10 +338,13 @@ export default function GraphView({ rootArtistId, onSelectArtist }) {
         duration: 300,
       })
 
-      // Activate semantic zoom for this node
+      // Activate semantic zoom — lock graph zoom, use filterLevel instead
       selectedNodeRef.current = nodeData.id
+      filterLevelRef.current = 0.5
+      setFilterLevel(0.5)
       setSemanticZoomActive(true)
-      applySemanticZoom(cy, nodeData.id)
+      cy.userZoomingEnabled(false)
+      applySemanticZoom(cy, nodeData.id, 0.5)
     })
 
     // Background tap: exit semantic zoom
@@ -352,39 +355,68 @@ export default function GraphView({ rootArtistId, onSelectArtist }) {
       }
     })
 
-    // Zoom event: recalculate semantic zoom with debounce
-    cy.on('zoom', () => {
+    // Wheel handler: when semantic zoom active, change filter level instead of zoom
+    const container = containerRef.current
+    const handleWheel = (e) => {
       if (!selectedNodeRef.current) return
-      if (zoomTimerRef.current) clearTimeout(zoomTimerRef.current)
-      zoomTimerRef.current = setTimeout(() => {
-        applySemanticZoom(cy, selectedNodeRef.current)
-      }, 80)
-    })
+      e.preventDefault()
+
+      const delta = e.deltaY > 0 ? -FILTER_STEP : FILTER_STEP
+      const newLevel = Math.max(0, Math.min(1, filterLevelRef.current + delta))
+      filterLevelRef.current = newLevel
+      setFilterLevel(newLevel)
+      applySemanticZoom(cy, selectedNodeRef.current, newLevel)
+    }
+    container.addEventListener('wheel', handleWheel, { passive: false })
 
     if (rootArtistId) {
       loadArtistConnections(rootArtistId, true)
     }
 
     return () => {
-      if (zoomTimerRef.current) clearTimeout(zoomTimerRef.current)
+      container.removeEventListener('wheel', handleWheel)
       cy.destroy()
     }
   }, [rootArtistId, loadArtistConnections, onSelectArtist, applySemanticZoom, clearSemanticZoom])
 
   const handleZoomIn = () => {
     const cy = cyRef.current
-    if (cy) cy.zoom({ level: cy.zoom() * 2.0, renderedPosition: { x: cy.width() / 2, y: cy.height() / 2 } })
+    if (!cy) return
+    if (selectedNodeRef.current) {
+      // Semantic zoom active: increase filter level
+      const newLevel = Math.min(1, filterLevelRef.current + FILTER_STEP)
+      filterLevelRef.current = newLevel
+      setFilterLevel(newLevel)
+      applySemanticZoom(cy, selectedNodeRef.current, newLevel)
+    } else {
+      cy.zoom({ level: cy.zoom() * 2.0, renderedPosition: { x: cy.width() / 2, y: cy.height() / 2 } })
+    }
   }
 
   const handleZoomOut = () => {
     const cy = cyRef.current
-    if (cy) cy.zoom({ level: cy.zoom() / 2.0, renderedPosition: { x: cy.width() / 2, y: cy.height() / 2 } })
+    if (!cy) return
+    if (selectedNodeRef.current) {
+      // Semantic zoom active: decrease filter level
+      const newLevel = Math.max(0, filterLevelRef.current - FILTER_STEP)
+      filterLevelRef.current = newLevel
+      setFilterLevel(newLevel)
+      applySemanticZoom(cy, selectedNodeRef.current, newLevel)
+    } else {
+      cy.zoom({ level: cy.zoom() / 2.0, renderedPosition: { x: cy.width() / 2, y: cy.height() / 2 } })
+    }
   }
 
   const handleFit = () => {
     const cy = cyRef.current
-    if (cy) cy.fit(undefined, 40)
+    if (!cy) return
+    if (selectedNodeRef.current) {
+      clearSemanticZoom(cy)
+    }
+    cy.fit(undefined, 40)
   }
+
+  const visibleCount = getVisibleCount(filterLevel)
 
   return (
     <div className="graph-wrapper">
@@ -403,10 +435,10 @@ export default function GraphView({ rootArtistId, onSelectArtist }) {
       )}
 
       <div className="graph-controls" role="toolbar" aria-label="Graph controls">
-        <button onClick={handleZoomIn} title="拡大" aria-label="拡大">
+        <button onClick={handleZoomIn} title={semanticZoomActive ? "表示を増やす" : "拡大"} aria-label={semanticZoomActive ? "表示を増やす" : "拡大"}>
           <span className="material-symbols-outlined">add</span>
         </button>
-        <button onClick={handleZoomOut} title="縮小" aria-label="縮小">
+        <button onClick={handleZoomOut} title={semanticZoomActive ? "表示を減らす" : "縮小"} aria-label={semanticZoomActive ? "表示を減らす" : "縮小"}>
           <span className="material-symbols-outlined">remove</span>
         </button>
         <div className="divider" />
@@ -423,8 +455,13 @@ export default function GraphView({ rootArtistId, onSelectArtist }) {
 
       {semanticZoomActive && (
         <div className="sz-indicator">
-          <span className="material-symbols-outlined">zoom_in_map</span>
-          Semantic Zoom
+          <span className="material-symbols-outlined">filter_list</span>
+          <span className="sz-bar-track">
+            <span className="sz-bar-fill" style={{ width: `${filterLevel * 100}%` }} />
+          </span>
+          <span className="sz-count">
+            {visibleCount === Infinity ? 'ALL' : visibleCount}
+          </span>
         </div>
       )}
 

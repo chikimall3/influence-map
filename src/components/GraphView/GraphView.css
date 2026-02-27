@@ -150,10 +150,10 @@
   z-index: 10;
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   background: var(--ink-charcoal);
   border: 1px solid rgba(212, 167, 83, 0.3);
-  padding: 4px 10px;
+  padding: 6px 12px;
   font-size: 10px;
   color: var(--ochre);
   letter-spacing: 0.05em;
@@ -162,6 +162,28 @@
 
 .sz-indicator .material-symbols-outlined {
   font-size: 14px;
+}
+
+.sz-bar-track {
+  width: 60px;
+  height: 4px;
+  background: rgba(232, 228, 217, 0.08);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.sz-bar-fill {
+  display: block;
+  height: 100%;
+  background: var(--ochre);
+  border-radius: 2px;
+  transition: width 0.15s ease-out;
+}
+
+.sz-count {
+  min-width: 22px;
+  text-align: right;
+  font-weight: 600;
 }
 
 @keyframes sz-fade-in {
