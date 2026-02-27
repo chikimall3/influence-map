@@ -469,6 +469,56 @@ async function run() {
   )
 
   // -----------------------------------------------------------------------
+  // TEST 10: Wheel scroll does NOT change camera zoom level
+  //   Camera zoom must stay constant; only node visibility changes.
+  // -----------------------------------------------------------------------
+  // Re-enter SZ
+  await page.evaluate(() => {
+    const cy = document.querySelector('.graph-view')._cyreg.cy
+    cy.emit('tap') // clear first
+  })
+  await sleep(300)
+  const szTapResult = await page.evaluate(() => {
+    const cy = document.querySelector('.graph-view')._cyreg.cy
+    const nonRoot = cy.nodes().filter(n => !n.data('isRoot'))
+    if (nonRoot.length === 0) return null
+    nonRoot[0].emit('tap')
+    return true
+  })
+  await sleep(1000) // wait for initial fit
+
+  if (!szTapResult) {
+    record('TEST 10: Wheel does not change camera zoom', false, 'no nodes')
+  } else {
+    const zoomBefore = await page.evaluate(() => {
+      return document.querySelector('.graph-view')._cyreg.cy.zoom()
+    })
+
+    // Send multiple wheel events
+    await page.evaluate(() => {
+      const container = document.querySelector('.graph-view')
+      for (let i = 0; i < 6; i++) {
+        container.dispatchEvent(
+          new WheelEvent('wheel', { deltaY: -120, bubbles: true, cancelable: true })
+        )
+      }
+    })
+    await sleep(800)
+
+    const zoomAfter = await page.evaluate(() => {
+      return document.querySelector('.graph-view')._cyreg.cy.zoom()
+    })
+
+    const zoomDelta = Math.abs(zoomAfter - zoomBefore)
+    const passed = zoomDelta < 0.01
+    record(
+      'TEST 10: Wheel does not change camera zoom',
+      passed,
+      `zoom before=${zoomBefore.toFixed(4)}, after=${zoomAfter.toFixed(4)}, delta=${zoomDelta.toFixed(4)}`
+    )
+  }
+
+  // -----------------------------------------------------------------------
   // Summary
   // -----------------------------------------------------------------------
   printSummary()

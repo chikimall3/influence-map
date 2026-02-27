@@ -42,7 +42,7 @@ export default function GraphView({ rootArtistId, onSelectArtist }) {
   const isLayoutRunningRef = useRef(false)
   const fitTimerRef = useRef(null)
 
-  const applySemanticZoom = useCallback((cy, selectedId, level) => {
+  const applySemanticZoom = useCallback((cy, selectedId, level, { fit = false } = {}) => {
     if (!cy || !selectedId) return
 
     const selectedNode = cy.getElementById(selectedId)
@@ -90,9 +90,9 @@ export default function GraphView({ rootArtistId, onSelectArtist }) {
       })
     })
 
-    // Debounced fit — skip during layout animation to prevent shaking
-    clearTimeout(fitTimerRef.current)
-    if (!isLayoutRunningRef.current) {
+    // Only fit camera on initial activation (not on every wheel scroll)
+    if (fit && !isLayoutRunningRef.current) {
+      clearTimeout(fitTimerRef.current)
       fitTimerRef.current = setTimeout(() => {
         const visibleNodes = cy.nodes('.sz-focus, .sz-neighbor')
         if (visibleNodes.length > 0) {
@@ -302,7 +302,7 @@ export default function GraphView({ rootArtistId, onSelectArtist }) {
           }
 
           if (selectedNodeRef.current) {
-            applySemanticZoom(cy, selectedNodeRef.current, filterLevelRef.current)
+            applySemanticZoom(cy, selectedNodeRef.current, filterLevelRef.current, { fit: true })
           }
         })
         layout.run()
@@ -418,8 +418,8 @@ export default function GraphView({ rootArtistId, onSelectArtist }) {
         await loadArtistConnections(nodeData.id, { skipLayoutAnim: true })
         // layoutstop already called applySemanticZoom, nothing more to do
       } else {
-        // Already loaded, apply SZ immediately
-        applySemanticZoom(cy, nodeData.id, 0.5)
+        // Already loaded, apply SZ with fit
+        applySemanticZoom(cy, nodeData.id, 0.5, { fit: true })
       }
     })
 
