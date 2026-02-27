@@ -172,4 +172,58 @@ export const graphStyles = [
       'display': 'none',
     },
   },
+  // --- Edge type filter ---
+  {
+    selector: 'edge.edge-dimmed',
+    style: {
+      'opacity': 0.06,
+    },
+  },
+  {
+    selector: 'node.node-dimmed-by-filter',
+    style: {
+      'opacity': 0.2,
+      'text-opacity': 0.3,
+    },
+  },
+  // --- Path highlight ---
+  {
+    selector: '.path-dimmed',
+    style: {
+      'opacity': 0.1,
+      'text-opacity': 0,
+    },
+  },
+  {
+    selector: 'node.path-highlight',
+    style: {
+      'opacity': 1,
+      'text-opacity': 1,
+      'z-index': 10,
+    },
+  },
+  {
+    selector: 'edge.path-highlight',
+    style: {
+      'opacity': 1,
+      'width': 3,
+      'z-index': 10,
+      'line-color': '#d4a753',
+      'target-arrow-color': '#d4a753',
+    },
+  },
+  {
+    selector: 'node.path-start',
+    style: {
+      'border-color': '#7da38d',
+      'border-width': 4,
+    },
+  },
+  {
+    selector: 'node.path-end',
+    style: {
+      'border-color': '#d4a753',
+      'border-width': 4,
+    },
+  },
 ]

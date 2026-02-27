@@ -36,6 +36,9 @@ export default function GraphView({ rootArtistId, onSelectArtist }) {
   const [filterLevel, setFilterLevel] = useState(0.5)
   const [tooltip, setTooltip] = useState(null)
   const tooltipTimerRef = useRef(null)
+  const [activeEdgeFilter, setActiveEdgeFilter] = useState(null)
+  const [pathMode, setPathMode] = useState(false)
+  const pathStartRef = useRef(null)
 
   const applySemanticZoom = useCallback((cy, selectedId, level) => {
     if (!cy || !selectedId) return
@@ -353,7 +356,43 @@ export default function GraphView({ rootArtistId, onSelectArtist }) {
         await loadArtistConnections(nodeData.id)
       }
 
-      // Activate semantic zoom — lock graph zoom, use filterLevel instead
+      // Path mode handling
+      if (pathStartRef.current === 'waiting') {
+        // First click in path mode: set start
+        pathStartRef.current = nodeData.id
+        cy.batch(() => {
+          cy.elements().removeClass('path-highlight path-start path-end path-dimmed')
+        })
+        node.addClass('path-start')
+        return
+      }
+
+      if (pathStartRef.current && pathStartRef.current !== 'waiting' && pathStartRef.current !== nodeData.id) {
+        // Second click in path mode: find path
+        const startNode = cy.getElementById(pathStartRef.current)
+        const endNode = node
+        if (startNode.length && endNode.length) {
+          const result = cy.elements().aStar({
+            root: startNode,
+            goal: endNode,
+            directed: false,
+          })
+          if (result.found) {
+            cy.batch(() => {
+              cy.elements().addClass('path-dimmed')
+              result.path.removeClass('path-dimmed').addClass('path-highlight')
+              startNode.addClass('path-start')
+              endNode.addClass('path-end')
+            })
+            cy.animate({ fit: { eles: result.path, padding: 60 }, duration: 400 })
+          }
+        }
+        pathStartRef.current = null
+        setPathMode(false)
+        return
+      }
+
+      // Normal mode: activate semantic zoom
       selectedNodeRef.current = nodeData.id
       filterLevelRef.current = 0.5
       setFilterLevel(0.5)
@@ -362,11 +401,17 @@ export default function GraphView({ rootArtistId, onSelectArtist }) {
       applySemanticZoom(cy, nodeData.id, 0.5)
     })
 
-    // Background tap: exit semantic zoom
+    // Background tap: exit semantic zoom / path mode
     cy.on('tap', (evt) => {
       if (evt.target === cy) {
         clearSemanticZoom(cy)
         onSelectArtist?.(null)
+        // Clear path highlight
+        pathStartRef.current = null
+        setPathMode(false)
+        cy.batch(() => {
+          cy.elements().removeClass('path-highlight path-start path-end path-dimmed')
+        })
       }
     })
 
@@ -454,6 +499,58 @@ export default function GraphView({ rootArtistId, onSelectArtist }) {
     cy.fit(undefined, 40)
   }
 
+  const handleEdgeFilter = (type) => {
+    const cy = cyRef.current
+    if (!cy) return
+    if (activeEdgeFilter === type) {
+      // Clear filter
+      setActiveEdgeFilter(null)
+      cy.batch(() => {
+        cy.edges().removeClass('edge-dimmed')
+        cy.nodes().removeClass('node-dimmed-by-filter')
+      })
+    } else {
+      setActiveEdgeFilter(type)
+      cy.batch(() => {
+        const connectedNodeIds = new Set()
+        cy.edges().forEach(edge => {
+          if (edge.data('influence_type') === type) {
+            edge.removeClass('edge-dimmed')
+            connectedNodeIds.add(edge.source().id())
+            connectedNodeIds.add(edge.target().id())
+          } else {
+            edge.addClass('edge-dimmed')
+          }
+        })
+        cy.nodes().forEach(node => {
+          if (connectedNodeIds.has(node.id())) {
+            node.removeClass('node-dimmed-by-filter')
+          } else {
+            node.addClass('node-dimmed-by-filter')
+          }
+        })
+      })
+    }
+  }
+
+  const togglePathMode = () => {
+    const cy = cyRef.current
+    if (!cy) return
+    if (pathMode) {
+      // Exit path mode
+      setPathMode(false)
+      pathStartRef.current = null
+      cy.batch(() => {
+        cy.elements().removeClass('path-highlight path-start path-end')
+      })
+    } else {
+      // Enter path mode, clear semantic zoom
+      if (selectedNodeRef.current) clearSemanticZoom(cy)
+      setPathMode(true)
+      pathStartRef.current = 'waiting'
+    }
+  }
+
   const visibleCount = getVisibleCount(filterLevel)
 
   return (
@@ -483,7 +580,17 @@ export default function GraphView({ rootArtistId, onSelectArtist }) {
         <button onClick={handleFit} title="全体表示" aria-label="全体表示">
           <span className="material-symbols-outlined">center_focus_strong</span>
         </button>
+        <div className="divider" />
+        <button onClick={togglePathMode} title="経路探索" aria-label="経路探索" className={pathMode ? 'active' : ''}>
+          <span className="material-symbols-outlined">route</span>
+        </button>
       </div>
+
+      {pathMode && (
+        <div className="path-hint">
+          {pathStartRef.current === 'waiting' ? '始点のノードをクリック' : '終点のノードをクリック'}
+        </div>
+      )}
 
       {nodeCount > 0 && (
         <div className="graph-info">
@@ -504,21 +611,21 @@ export default function GraphView({ rootArtistId, onSelectArtist }) {
       )}
 
       <div className="graph-legend" aria-label="Legend">
-        <div className="legend-item">
-          <span className="legend-dot" style={{ background: '#7da38d' }} /> {t('influence_type.musical')}
-        </div>
-        <div className="legend-item">
-          <span className="legend-dot" style={{ background: '#d4a753' }} /> {t('influence_type.lyrical')}
-        </div>
-        <div className="legend-item">
-          <span className="legend-dot" style={{ background: '#9ca3af' }} /> {t('influence_type.philosophical')}
-        </div>
-        <div className="legend-item">
-          <span className="legend-dot" style={{ background: '#c25e5e' }} /> {t('influence_type.aesthetic')}
-        </div>
-        <div className="legend-item">
-          <span className="legend-dot" style={{ background: '#8a8880' }} /> {t('influence_type.personal')}
-        </div>
+        {[
+          { type: 'musical', color: '#7da38d' },
+          { type: 'lyrical', color: '#d4a753' },
+          { type: 'philosophical', color: '#9ca3af' },
+          { type: 'aesthetic', color: '#c25e5e' },
+          { type: 'personal', color: '#8a8880' },
+        ].map(({ type, color }) => (
+          <button
+            key={type}
+            className={`legend-item ${activeEdgeFilter === type ? 'legend-active' : ''}`}
+            onClick={() => handleEdgeFilter(type)}
+          >
+            <span className="legend-dot" style={{ background: color }} /> {t(`influence_type.${type}`)}
+          </button>
+        ))}
       </div>
 
       {tooltip && (
