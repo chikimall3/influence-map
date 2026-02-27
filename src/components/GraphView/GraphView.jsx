@@ -19,7 +19,7 @@ const LAYOUT_OPTIONS = {
   animationDuration: 400,
 }
 
-const FILTER_STEP = 0.08
+const FILTER_STEP = 0.02
 const SZ_CLASSES = 'sz-focus sz-neighbor sz-dimmed sz-hidden sz-visible-edge'
 
 export default function GraphView({ rootArtistId, onSelectArtist }) {
@@ -164,6 +164,7 @@ export default function GraphView({ rootArtistId, onSelectArtist }) {
     }
   }, [])
 
+  // Full clear: remove all SZ classes + reset state (used by fit button, path mode, etc.)
   const clearSemanticZoom = useCallback((cy) => {
     if (!cy) return
     cy.batch(() => {
@@ -177,6 +178,19 @@ export default function GraphView({ rootArtistId, onSelectArtist }) {
     szLockedZoomRef.current = null
     szFittingRef.current = false
     // Re-enable normal zoom
+    cy.userZoomingEnabled(true)
+    cy.userPanningEnabled(true)
+  }, [])
+
+  // Exit SZ interactive mode but KEEP filter results on the map
+  const exitSemanticZoomKeepResults = useCallback((cy) => {
+    if (!cy) return
+    clearTimeout(fitTimerRef.current)
+    selectedNodeRef.current = null
+    setSemanticZoomActive(false)
+    szLockedZoomRef.current = null
+    szFittingRef.current = false
+    // Re-enable normal zoom/pan — classes (sz-hidden, sz-dimmed, etc.) stay
     cy.userZoomingEnabled(true)
     cy.userPanningEnabled(true)
   }, [])
@@ -484,10 +498,10 @@ export default function GraphView({ rootArtistId, onSelectArtist }) {
       }
     })
 
-    // Background tap: exit semantic zoom / path mode
+    // Background tap: exit SZ mode but keep filter results on map
     cy.on('tap', (evt) => {
       if (evt.target === cy) {
-        clearSemanticZoom(cy)
+        exitSemanticZoomKeepResults(cy)
         onSelectArtist?.(null)
         // Clear path highlight
         pathStartRef.current = null
@@ -557,7 +571,7 @@ export default function GraphView({ rootArtistId, onSelectArtist }) {
       container.removeEventListener('wheel', handleWheel, { capture: true })
       cy.destroy()
     }
-  }, [rootArtistId, loadArtistConnections, onSelectArtist, applySemanticZoom, clearSemanticZoom])
+  }, [rootArtistId, loadArtistConnections, onSelectArtist, applySemanticZoom, clearSemanticZoom, exitSemanticZoomKeepResults])
 
   const handleZoomIn = () => {
     const cy = cyRef.current
