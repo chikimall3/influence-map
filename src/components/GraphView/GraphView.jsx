@@ -95,29 +95,52 @@ export default function GraphView({ rootArtistId, onSelectArtist }) {
     // Ensure zoom stays disabled during SZ mode
     cy.userZoomingEnabled(false)
 
-    // On initial activation: arrange ALL neighbors in centered tree, then fit
+    // On initial activation: arrange neighbors — influencers above, influenced below
     if (fit && !isLayoutRunningRef.current) {
-      // Position focus node at center, neighbors in rows below
       const ext = cy.extent()
       const centerX = (ext.x1 + ext.x2) / 2
       const centerY = (ext.y1 + ext.y2) / 2
-      const rowSpacing = 120
+      const vertSpacing = 140
       const colSpacing = 100
-      const cols = Math.max(3, Math.ceil(Math.sqrt(sorted.length)))
 
-      // Move focus node to top center
-      selectedNode.position({ x: centerX, y: centerY - rowSpacing })
-
-      // Arrange ALL neighbors (sorted by importance) in rows below
-      sorted.forEach((node, i) => {
-        const row = Math.floor(i / cols)
-        const colCount = Math.min(cols, sorted.length - row * cols)
-        const col = i % cols
-        const rowWidth = (colCount - 1) * colSpacing
-        const x = centerX - rowWidth / 2 + col * colSpacing
-        const y = centerY + row * rowSpacing
-        node.position({ x, y })
+      // Separate influencers (source→selected) vs influenced (selected→target)
+      const influencers = []
+      const influenced = []
+      sorted.forEach(node => {
+        const hasEdgeToSelected = cy.edges().some(e =>
+          e.source().id() === node.id() && e.target().id() === selectedId
+        )
+        if (hasEdgeToSelected) {
+          influencers.push(node)
+        } else {
+          influenced.push(node)
+        }
       })
+
+      // Place focus node at center
+      selectedNode.position({ x: centerX, y: centerY })
+
+      // Influencers: single row above, centered
+      if (influencers.length > 0) {
+        const totalW = (influencers.length - 1) * colSpacing
+        influencers.forEach((node, i) => {
+          node.position({
+            x: centerX - totalW / 2 + i * colSpacing,
+            y: centerY - vertSpacing,
+          })
+        })
+      }
+
+      // Influenced: single row below, centered
+      if (influenced.length > 0) {
+        const totalW = (influenced.length - 1) * colSpacing
+        influenced.forEach((node, i) => {
+          node.position({
+            x: centerX - totalW / 2 + i * colSpacing,
+            y: centerY + vertSpacing,
+          })
+        })
+      }
 
       clearTimeout(fitTimerRef.current)
       szFittingRef.current = true
