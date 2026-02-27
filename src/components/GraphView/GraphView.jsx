@@ -19,7 +19,7 @@ const LAYOUT_OPTIONS = {
   animationDuration: 400,
 }
 
-const FILTER_STEP = 0.15
+const FILTER_STEP = 0.25
 const SZ_CLASSES = 'sz-focus sz-neighbor sz-dimmed sz-hidden sz-visible-edge'
 
 export default function GraphView({ rootArtistId, onSelectArtist }) {
@@ -39,6 +39,7 @@ export default function GraphView({ rootArtistId, onSelectArtist }) {
   const [activeEdgeFilter, setActiveEdgeFilter] = useState(null)
   const [pathMode, setPathMode] = useState(false)
   const pathStartRef = useRef(null)
+  const prevMaxVisibleRef = useRef(null)
 
   const applySemanticZoom = useCallback((cy, selectedId, level) => {
     if (!cy || !selectedId) return
@@ -88,14 +89,20 @@ export default function GraphView({ rootArtistId, onSelectArtist }) {
       })
     })
 
-    // Fit view to focus + visible neighbor nodes
-    const visibleNodes = cy.nodes('.sz-focus, .sz-neighbor')
-    if (visibleNodes.length > 0) {
-      cy.animate({
-        fit: { eles: visibleNodes, padding: 50 },
-        duration: 300,
-        easing: 'ease-out',
-      })
+    // Only re-fit when the visible node count actually changes
+    const shouldAnimate = maxVisible !== prevMaxVisibleRef.current
+    prevMaxVisibleRef.current = maxVisible
+
+    if (shouldAnimate) {
+      const visibleNodes = cy.nodes('.sz-focus, .sz-neighbor')
+      if (visibleNodes.length > 0) {
+        cy.stop()
+        cy.animate({
+          fit: { eles: visibleNodes, padding: 50 },
+          duration: 300,
+          easing: 'ease-out',
+        })
+      }
     }
   }, [])
 
@@ -106,6 +113,7 @@ export default function GraphView({ rootArtistId, onSelectArtist }) {
     })
     selectedNodeRef.current = null
     filterLevelRef.current = 0.5
+    prevMaxVisibleRef.current = null
     setFilterLevel(0.5)
     setSemanticZoomActive(false)
     // Re-enable normal zoom
@@ -328,7 +336,7 @@ export default function GraphView({ rootArtistId, onSelectArtist }) {
       layout: { name: 'preset' },
       minZoom: 0.1,
       maxZoom: 6,
-      wheelSensitivity: 0.8,
+      wheelSensitivity: 1.5,
     })
 
     cyRef.current = cy
@@ -395,6 +403,7 @@ export default function GraphView({ rootArtistId, onSelectArtist }) {
       // Normal mode: activate semantic zoom
       selectedNodeRef.current = nodeData.id
       filterLevelRef.current = 0.5
+      prevMaxVisibleRef.current = null
       setFilterLevel(0.5)
       setSemanticZoomActive(true)
       cy.userZoomingEnabled(false)
