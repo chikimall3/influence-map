@@ -89,6 +89,16 @@ export default function GraphView({ rootArtistId, onSelectArtist }) {
         }
       })
     })
+
+    // Fit view to focus + visible neighbor nodes
+    const visibleNodes = cy.nodes('.sz-focus, .sz-neighbor')
+    if (visibleNodes.length > 0) {
+      cy.animate({
+        fit: { eles: visibleNodes, padding: 50 },
+        duration: 300,
+        easing: 'ease-out',
+      })
+    }
   }, [])
 
   const clearSemanticZoom = useCallback((cy) => {
@@ -332,11 +342,6 @@ export default function GraphView({ rootArtistId, onSelectArtist }) {
       if (nodeData.hasChildren !== false) {
         await loadArtistConnections(nodeData.id)
       }
-
-      cy.animate({
-        center: { eles: node },
-        duration: 300,
-      })
 
       // Activate semantic zoom — lock graph zoom, use filterLevel instead
       selectedNodeRef.current = nodeData.id

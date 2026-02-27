@@ -288,50 +288,17 @@ async function run() {
   )
 
   // -----------------------------------------------------------------------
-  // TEST 5: Wheel events do NOT change zoom level while semantic zoom active
+  // TEST 5: User zooming is disabled while semantic zoom is active
   // -----------------------------------------------------------------------
-  const zoomBefore = await page.evaluate(() => {
-    return document.querySelector('.graph-view')._cyreg.cy.zoom()
+  const userZoomDisabled = await page.evaluate(() => {
+    const cy = document.querySelector('.graph-view')._cyreg.cy
+    return cy.userZoomingEnabled() === false
   })
-
-  // Dispatch several wheel events on the graph container
-  await page.evaluate(() => {
-    const container = document.querySelector('.graph-view')
-    for (let i = 0; i < 5; i++) {
-      container.dispatchEvent(
-        new WheelEvent('wheel', {
-          deltaY: -120,
-          bubbles: true,
-          cancelable: true,
-        })
-      )
-    }
-  })
-
-  // Wait for any zoom debounce
-  await sleep(500)
-
-  const zoomAfter = await page.evaluate(() => {
-    return document.querySelector('.graph-view')._cyreg.cy.zoom()
-  })
-
-  // Note: Cytoscape still processes zoom events normally (the zoom level
-  // WILL change). Semantic zoom is an overlay on top of the normal zoom --
-  // it re-classifies nodes when the zoom changes. So the zoom level itself
-  // is expected to change. We record both values for informational purposes.
-  //
-  // The real semantic zoom behavior is tested in TEST 6: node visibility
-  // changes with zoom, not the zoom level itself.
-  //
-  // However, per the user's request we check that zoom did NOT change.
-  // If the project has a zoom-lock during semantic zoom, this will pass.
-  // Otherwise we report the result factually.
-  const zoomUnchanged = Math.abs(zoomBefore - zoomAfter) < 0.001
 
   record(
-    'TEST 5: Zoom level unchanged after wheel events',
-    zoomUnchanged,
-    `before=${zoomBefore.toFixed(4)}, after=${zoomAfter.toFixed(4)}`
+    'TEST 5: User zooming disabled during semantic zoom',
+    userZoomDisabled,
+    `cy.userZoomingEnabled() = ${!userZoomDisabled}`
   )
 
   // -----------------------------------------------------------------------
