@@ -2,26 +2,25 @@ import { describe, it, expect } from 'vitest'
 import { getVisibleCount } from '../graph-utils.js'
 
 describe('getVisibleCount', () => {
-  it('returns 3 for filterLevel < 0.2', () => {
+  it('returns 3 at level 0', () => {
     expect(getVisibleCount(0)).toBe(3)
-    expect(getVisibleCount(0.1)).toBe(3)
-    expect(getVisibleCount(0.19)).toBe(3)
   })
-  it('returns 5 for filterLevel 0.2-0.4', () => {
-    expect(getVisibleCount(0.2)).toBe(5)
-    expect(getVisibleCount(0.3)).toBe(5)
-  })
-  it('returns 10 for filterLevel 0.4-0.6', () => {
-    expect(getVisibleCount(0.4)).toBe(10)
-    expect(getVisibleCount(0.5)).toBe(10)
-  })
-  it('returns 20 for filterLevel 0.6-0.8', () => {
-    expect(getVisibleCount(0.6)).toBe(20)
-    expect(getVisibleCount(0.7)).toBe(20)
-  })
-  it('returns Infinity for filterLevel >= 0.8', () => {
-    expect(getVisibleCount(0.8)).toBe(Infinity)
+  it('returns Infinity at level >= 0.95', () => {
+    expect(getVisibleCount(0.95)).toBe(Infinity)
     expect(getVisibleCount(1.0)).toBe(Infinity)
+  })
+  it('increases monotonically', () => {
+    let prev = getVisibleCount(0)
+    for (let l = 0.1; l < 0.95; l += 0.1) {
+      const cur = getVisibleCount(l)
+      expect(cur).toBeGreaterThanOrEqual(prev)
+      prev = cur
+    }
+  })
+  it('returns ~26 at level 0.5', () => {
+    const count = getVisibleCount(0.5)
+    expect(count).toBeGreaterThanOrEqual(25)
+    expect(count).toBeLessThanOrEqual(28)
   })
   it('handles edge cases', () => {
     expect(getVisibleCount(-1)).toBe(3)

@@ -19,7 +19,7 @@ const LAYOUT_OPTIONS = {
   animationDuration: 400,
 }
 
-const FILTER_STEP = 0.25
+const FILTER_STEP = 0.08
 const SZ_CLASSES = 'sz-focus sz-neighbor sz-dimmed sz-hidden sz-visible-edge'
 
 export default function GraphView({ rootArtistId, onSelectArtist }) {

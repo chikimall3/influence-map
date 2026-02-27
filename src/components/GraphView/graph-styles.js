@@ -37,6 +37,8 @@ export const graphStyles = [
       'height': 'mapData(connectionCount, 1, 15, 42, 72)',
       'text-max-width': 110,
       'text-wrap': 'ellipsis',
+      'transition-property': 'opacity, text-opacity',
+      'transition-duration': '0.25s',
     },
   },
   // Nodes with images
@@ -98,6 +100,8 @@ export const graphStyles = [
       'curve-style': 'bezier',
       'opacity': 0.5,
       'arrow-scale': 0.8,
+      'transition-property': 'opacity',
+      'transition-duration': '0.25s',
     },
   },
   // Connected edges highlight on node select
@@ -150,7 +154,9 @@ export const graphStyles = [
   {
     selector: 'node.sz-hidden',
     style: {
-      'display': 'none',
+      'opacity': 0,
+      'text-opacity': 0,
+      'events': 'no',
     },
   },
   {
@@ -169,7 +175,8 @@ export const graphStyles = [
   {
     selector: 'edge.sz-hidden',
     style: {
-      'display': 'none',
+      'opacity': 0,
+      'events': 'no',
     },
   },
   // --- Edge type filter ---

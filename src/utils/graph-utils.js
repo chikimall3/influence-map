@@ -1,8 +1,8 @@
 // filterLevel 0.0-1.0 -> visible neighbor count
+// Smooth continuous mapping: 3 at level 0 → all at level 1
 export function getVisibleCount(filterLevel) {
-  if (filterLevel < 0.2) return 3
-  if (filterLevel < 0.4) return 5
-  if (filterLevel < 0.6) return 10
-  if (filterLevel < 0.8) return 20
-  return Infinity
+  const level = Math.max(0, Math.min(1, filterLevel))
+  if (level >= 0.95) return Infinity
+  // Continuous curve: 3 → 50
+  return Math.round(3 + level * 47)
 }
