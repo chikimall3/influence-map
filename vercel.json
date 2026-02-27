@@ -1,0 +1,6 @@
+{
+  "rewrites": [
+    { "source": "/themes.html", "destination": "/themes.html" },
+    { "source": "/(.*)", "destination": "/index.html" }
+  ]
+}

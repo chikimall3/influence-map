@@ -1,68 +1,134 @@
 :root {
-  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
+  /* Ink & Paper palette */
+  --ink-black: #121210;
+  --ink-charcoal: #1c1c1a;
+  --ink-lighter: #2a2a26;
+  --paper-texture: #e8e4d9;
+  --paper-muted: #8a8880;
+  --sage: #7da38d;
+  --sage-dark: #6b8f7a;
+  --clay: #c25e5e;
+  --ochre: #d4a753;
+  --slate-ink: #4a5568;
+
+  /* Semantic aliases */
+  --bg-primary: var(--ink-black);
+  --bg-secondary: var(--ink-charcoal);
+  --bg-panel: var(--ink-lighter);
+  --text-primary: var(--paper-texture);
+  --text-secondary: var(--paper-muted);
+  --accent: var(--sage);
+  --accent-hover: var(--sage-dark);
+  --border: rgba(232, 228, 217, 0.06);
+
+  /* Trust badges */
+  --trust-self: var(--sage);
+  --trust-expert: #6a80aa;
+  --trust-wikidata: var(--ochre);
+  --trust-academic: var(--slate-ink);
+  --trust-community: var(--paper-muted);
+
+  font-family: 'Noto Sans JP', system-ui, -apple-system, sans-serif;
   line-height: 1.5;
-  font-weight: 400;
-
-  color-scheme: light dark;
-  color: rgba(255, 255, 255, 0.87);
-  background-color: #242424;
-
+  color: var(--text-primary);
+  background-color: var(--bg-primary);
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-a {
-  font-weight: 500;
-  color: #646cff;
-  text-decoration: inherit;
-}
-a:hover {
-  color: #535bf2;
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
 }
 
 body {
-  margin: 0;
-  display: flex;
-  place-items: center;
-  min-width: 320px;
   min-height: 100vh;
+  overflow: hidden;
 }
 
-h1 {
-  font-size: 3.2em;
-  line-height: 1.1;
+#root {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.font-display {
+  font-family: 'Playfair Display', 'Noto Sans JP', serif;
+}
+
+a {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+a:hover {
+  color: var(--accent-hover);
 }
 
 button {
-  border-radius: 8px;
-  border: 1px solid transparent;
-  padding: 0.6em 1.2em;
-  font-size: 1em;
-  font-weight: 500;
-  font-family: inherit;
-  background-color: #1a1a1a;
+  border: none;
+  background: none;
+  color: inherit;
+  font: inherit;
   cursor: pointer;
-  transition: border-color 0.25s;
-}
-button:hover {
-  border-color: #646cff;
-}
-button:focus,
-button:focus-visible {
-  outline: 4px auto -webkit-focus-ring-color;
 }
 
-@media (prefers-color-scheme: light) {
-  :root {
-    color: #213547;
-    background-color: #ffffff;
-  }
-  a:hover {
-    color: #747bff;
-  }
-  button {
-    background-color: #f9f9f9;
-  }
+button:active {
+  transform: scale(0.97);
+}
+
+input {
+  border: none;
+  background: none;
+  color: inherit;
+  font: inherit;
+  outline: none;
+}
+
+/* Focus visible */
+:focus-visible {
+  outline: 2px solid var(--sage);
+  outline-offset: 2px;
+}
+
+input:focus-visible {
+  outline: none;
+  border-color: rgba(125, 163, 141, 0.5);
+}
+
+/* Text selection */
+::selection {
+  background: rgba(125, 163, 141, 0.3);
+  color: var(--paper-texture);
+}
+
+/* Scrollbar - Webkit */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: var(--ink-charcoal);
+}
+::-webkit-scrollbar-thumb {
+  background: #3d3d3a;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #52524e;
+}
+
+/* Scrollbar - Firefox */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #3d3d3a var(--ink-charcoal);
+}
+
+/* Material Symbols */
+.material-symbols-outlined {
+  font-variation-settings: 'FILL' 0, 'wght' 400;
+  user-select: none;
 }

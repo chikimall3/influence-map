@@ -1,0 +1,192 @@
+.graph-wrapper {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  background: var(--ink-black);
+  /* Subtle paper grain texture */
+  background-image: url("data:image/svg+xml,%3Csvg width='4' height='4' xmlns='http://www.w3.org/2000/svg'%3E%3Crect width='4' height='4' fill='%23fff' fill-opacity='0.012'/%3E%3C/svg%3E");
+}
+
+.graph-view {
+  width: 100%;
+  height: 100%;
+  cursor: grab;
+}
+
+.graph-view:active {
+  cursor: grabbing;
+}
+
+/* Loading overlay */
+.graph-loading {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  background: var(--ink-black);
+  z-index: 20;
+  color: var(--paper-muted);
+  font-size: 13px;
+  font-style: italic;
+}
+
+.graph-spinner {
+  width: 24px;
+  height: 24px;
+  border: 2px solid var(--ink-lighter);
+  border-top-color: var(--sage);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Error */
+.graph-error {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--clay);
+  font-size: 14px;
+  z-index: 20;
+}
+
+/* Zoom controls overlay */
+.graph-controls {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  z-index: 10;
+  display: flex;
+  gap: 2px;
+  background: var(--ink-charcoal);
+  border: 1px solid var(--border);
+  padding: 2px;
+}
+
+.graph-controls button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  color: var(--paper-muted);
+  transition: color 0.15s, background 0.15s;
+}
+
+.graph-controls button:hover {
+  color: var(--paper-texture);
+  background: var(--ink-lighter);
+}
+
+.graph-controls .divider {
+  width: 1px;
+  background: var(--border);
+  margin: 4px 2px;
+}
+
+/* Legend overlay */
+.graph-legend {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 10;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--ink-charcoal);
+  border: 1px solid var(--border);
+  padding: 4px 10px;
+  font-size: 11px;
+  color: var(--paper-texture);
+  letter-spacing: 0.03em;
+}
+
+.legend-dot {
+  width: 7px;
+  height: 7px;
+  transform: rotate(45deg);
+  flex-shrink: 0;
+}
+
+/* Node count info */
+.graph-info {
+  position: absolute;
+  bottom: 12px;
+  left: 12px;
+  z-index: 10;
+  background: var(--ink-charcoal);
+  border: 1px solid var(--border);
+  padding: 4px 10px;
+  font-size: 10px;
+  color: var(--paper-muted);
+  letter-spacing: 0.05em;
+}
+
+/* Semantic zoom indicator */
+.sz-indicator {
+  position: absolute;
+  bottom: 12px;
+  right: 12px;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--ink-charcoal);
+  border: 1px solid rgba(212, 167, 83, 0.3);
+  padding: 4px 10px;
+  font-size: 10px;
+  color: var(--ochre);
+  letter-spacing: 0.05em;
+  animation: sz-fade-in 0.2s ease-out;
+}
+
+.sz-indicator .material-symbols-outlined {
+  font-size: 14px;
+}
+
+@keyframes sz-fade-in {
+  from { opacity: 0; transform: scale(0.9); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@media (max-width: 768px) {
+  .graph-legend {
+    display: none;
+  }
+  .graph-controls {
+    top: 8px;
+    left: 8px;
+  }
+  .graph-controls button {
+    width: 44px;
+    height: 44px;
+  }
+  .graph-info {
+    bottom: 8px;
+    left: 8px;
+  }
+  .sz-indicator {
+    bottom: 8px;
+    right: 8px;
+  }
+}

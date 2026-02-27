@@ -1,0 +1,175 @@
+const INFLUENCE_COLORS = {
+  musical: '#7da38d',
+  lyrical: '#d4a753',
+  philosophical: '#9ca3af',
+  aesthetic: '#c25e5e',
+  personal: '#8a8880',
+}
+
+const TRUST_OPACITY = {
+  self_stated: 1.0,
+  expert_db: 0.85,
+  wikidata: 0.7,
+  academic: 0.8,
+  community: 0.5,
+}
+
+export const graphStyles = [
+  {
+    selector: 'node',
+    style: {
+      'label': 'data(label)',
+      'text-valign': 'bottom',
+      'text-halign': 'center',
+      'text-margin-y': 8,
+      'font-size': 11,
+      'font-family': 'Noto Sans JP, system-ui, sans-serif',
+      'font-weight': 500,
+      'color': '#e8e4d9',
+      'text-outline-color': '#121210',
+      'text-outline-width': 2,
+      'text-outline-opacity': 1,
+      'background-color': '#2a2a26',
+      'background-opacity': 0.8,
+      'border-width': 1.5,
+      'border-color': '#8a8880',
+      'width': 'mapData(connectionCount, 1, 15, 40, 70)',
+      'height': 'mapData(connectionCount, 1, 15, 40, 70)',
+      'text-max-width': 100,
+      'text-wrap': 'ellipsis',
+    },
+  },
+  // Nodes with images
+  {
+    selector: 'node[image_url]',
+    style: {
+      'background-image': 'data(image_url)',
+      'background-fit': 'cover',
+      'background-clip': 'node',
+      'background-opacity': 1,
+      'background-image-crossorigin': 'anonymous',
+    },
+  },
+  {
+    selector: 'node[?isRoot]',
+    style: {
+      'border-color': '#7da38d',
+      'border-width': 3,
+      'width': 60,
+      'height': 60,
+      'font-size': 13,
+      'font-weight': 'bold',
+      'background-opacity': 1,
+    },
+  },
+  {
+    selector: 'node[?hasChildren]',
+    style: {
+      'border-style': 'dashed',
+      'border-color': '#8a8880',
+    },
+  },
+  // Hover effect
+  {
+    selector: 'node:active',
+    style: {
+      'overlay-color': '#7da38d',
+      'overlay-opacity': 0.15,
+      'overlay-padding': 6,
+    },
+  },
+  {
+    selector: 'node:selected',
+    style: {
+      'border-color': '#d4a753',
+      'border-width': 2.5,
+      'overlay-color': '#d4a753',
+      'overlay-opacity': 0.08,
+      'overlay-padding': 8,
+    },
+  },
+  {
+    selector: 'edge',
+    style: {
+      'width': 1,
+      'line-color': '#8a8880',
+      'target-arrow-color': '#8a8880',
+      'target-arrow-shape': 'triangle',
+      'curve-style': 'bezier',
+      'opacity': 0.4,
+      'arrow-scale': 0.7,
+    },
+  },
+  // Connected edges highlight on node select
+  {
+    selector: 'node:selected ~ edge',
+    style: {
+      'opacity': 0.8,
+      'width': 2,
+    },
+  },
+  // Influence type colors
+  ...Object.entries(INFLUENCE_COLORS).map(([type, color]) => ({
+    selector: `edge[influence_type = "${type}"]`,
+    style: {
+      'line-color': color,
+      'target-arrow-color': color,
+    },
+  })),
+  // Trust level opacity
+  ...Object.entries(TRUST_OPACITY).map(([level, opacity]) => ({
+    selector: `edge[trust_level = "${level}"]`,
+    style: {
+      'opacity': opacity,
+    },
+  })),
+  // --- Semantic zoom classes (MUST be last to override all above) ---
+  {
+    selector: 'node.sz-focus',
+    style: {
+      'opacity': 1,
+      'border-color': '#d4a753',
+      'border-width': 3,
+      'z-index': 10,
+    },
+  },
+  {
+    selector: 'node.sz-neighbor',
+    style: {
+      'opacity': 1,
+      'z-index': 5,
+    },
+  },
+  {
+    selector: 'node.sz-dimmed',
+    style: {
+      'opacity': 0.12,
+      'text-opacity': 0,
+    },
+  },
+  {
+    selector: 'node.sz-hidden',
+    style: {
+      'display': 'none',
+    },
+  },
+  {
+    selector: 'edge.sz-visible-edge',
+    style: {
+      'opacity': 0.8,
+      'width': 2,
+    },
+  },
+  {
+    selector: 'edge.sz-dimmed',
+    style: {
+      'opacity': 0.03,
+    },
+  },
+  {
+    selector: 'edge.sz-hidden',
+    style: {
+      'display': 'none',
+    },
+  },
+]

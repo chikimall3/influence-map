@@ -1,0 +1,38 @@
+{
+  "app": {
+    "title": "影響マップ"
+  },
+  "home": {
+    "subtitle": "音楽アーティストの影響関係を探索する",
+    "featured_title": "まずはこの人から"
+  },
+  "search": {
+    "placeholder": "アーティスト名を検索...",
+    "no_results": "「{{query}}」に一致するアーティストが見つかりません"
+  },
+  "graph": {
+    "loading": "読み込み中...",
+    "error_not_found": "アーティストが見つかりません",
+    "error_load_failed": "データの読み込みに失敗しました"
+  },
+  "artist_panel": {
+    "influences": "影響を受けた人物",
+    "influenced": "影響を与えた人物",
+    "sources": "出典",
+    "no_data": "影響関係のデータがありません"
+  },
+  "trust": {
+    "self_stated": "本人発言",
+    "expert_db": "専門家DB",
+    "wikidata": "Wikidata",
+    "academic": "学術論文",
+    "community": "コミュニティ"
+  },
+  "influence_type": {
+    "musical": "音楽的",
+    "lyrical": "歌詞",
+    "philosophical": "思想的",
+    "aesthetic": "美学的",
+    "personal": "人的"
+  }
+}
