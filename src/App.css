@@ -104,6 +104,118 @@
   min-width: 0;
 }
 
+/* Share button */
+.share-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  color: var(--paper-muted);
+  border: 1px solid var(--border);
+  transition: color 0.2s, border-color 0.2s, background 0.2s;
+  flex-shrink: 0;
+  margin-left: auto;
+}
+
+.share-btn:hover {
+  color: var(--paper-texture);
+  border-color: rgba(125, 163, 141, 0.3);
+  background: var(--ink-lighter);
+}
+
+.share-btn .material-symbols-outlined {
+  font-size: 18px;
+}
+
+/* Share toast */
+.share-toast {
+  position: fixed;
+  top: 60px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--sage);
+  color: var(--ink-black);
+  padding: 8px 20px;
+  font-size: 13px;
+  font-weight: 600;
+  z-index: 200;
+  animation: toast-in 0.3s ease-out;
+}
+
+@keyframes toast-in {
+  from { opacity: 0; transform: translateX(-50%) translateY(-10px); }
+  to { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
+/* Onboarding overlay */
+.onboarding-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  z-index: 300;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: page-fade-in 0.3s ease-out;
+}
+
+.onboarding-card {
+  background: var(--ink-charcoal);
+  border: 1px solid var(--border);
+  padding: 32px;
+  max-width: 400px;
+  width: 90%;
+}
+
+.onboarding-card h2 {
+  font-family: 'Playfair Display', 'Noto Sans JP', serif;
+  font-size: 20px;
+  font-weight: 700;
+  font-style: italic;
+  color: var(--paper-texture);
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+.onboarding-tips {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-bottom: 24px;
+}
+
+.onboarding-tips li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 14px;
+  color: var(--paper-texture);
+}
+
+.onboarding-tips .material-symbols-outlined {
+  color: var(--sage);
+  font-size: 22px;
+  flex-shrink: 0;
+}
+
+.onboarding-dismiss {
+  display: block;
+  width: 100%;
+  padding: 12px;
+  background: var(--sage);
+  color: var(--ink-black);
+  font-size: 14px;
+  font-weight: 600;
+  text-align: center;
+  transition: background 0.2s;
+}
+
+.onboarding-dismiss:hover {
+  background: var(--sage-dark);
+}
+
 @media (max-width: 768px) {
   .app-header {
     padding: 8px 12px;
@@ -114,7 +226,8 @@
     font-size: 14px;
   }
 
-  .home-btn {
+  .home-btn,
+  .share-btn {
     width: 44px;
     height: 44px;
   }

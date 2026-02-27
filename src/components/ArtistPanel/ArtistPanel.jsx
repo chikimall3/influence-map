@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { supabase } from '../../lib/supabase.js'
+import { getCached, setCache } from '../../lib/cache.js'
 import './ArtistPanel.css'
 
 const TRUST_CONFIG = {
@@ -33,27 +34,36 @@ export default function ArtistPanel({ artist, onClose, onNavigate }) {
     setLoadingPanel(true)
 
     async function fetchDetails() {
-      // Fetch full artist details + both influence directions in parallel
-      const [artistRes, influencersRes, influencedRes] = await Promise.all([
-        supabase
-          .from('artists')
-          .select('*')
-          .eq('id', artist.id)
-          .single(),
-        supabase
-          .from('influences')
-          .select(`id, influence_type, trust_level, influencer:influencer_id (id, name, name_ja)`)
-          .eq('influenced_id', artist.id),
-        supabase
-          .from('influences')
-          .select(`id, influence_type, trust_level, influenced:influenced_id (id, name, name_ja)`)
-          .eq('influencer_id', artist.id),
-      ])
+      const panelCacheKey = `panel:${artist.id}`
+      const cached = getCached(panelCacheKey)
 
-      if (artistRes.data) setFullArtist(artistRes.data)
+      let artistData, influencersData, influencedData
 
-      if (influencersRes.data) setInfluencers(influencersRes.data)
-      if (influencedRes.data) setInfluenced(influencedRes.data)
+      if (cached) {
+        artistData = cached.artist
+        influencersData = cached.influencers
+        influencedData = cached.influenced
+      } else {
+        const [artistRes, influencersRes, influencedRes] = await Promise.all([
+          supabase.from('artists').select('*').eq('id', artist.id).single(),
+          supabase
+            .from('influences')
+            .select(`id, influence_type, trust_level, influencer:influencer_id (id, name, name_ja)`)
+            .eq('influenced_id', artist.id),
+          supabase
+            .from('influences')
+            .select(`id, influence_type, trust_level, influenced:influenced_id (id, name, name_ja)`)
+            .eq('influencer_id', artist.id),
+        ])
+        artistData = artistRes.data
+        influencersData = influencersRes.data
+        influencedData = influencedRes.data
+        setCache(panelCacheKey, { artist: artistData, influencers: influencersData, influenced: influencedData })
+      }
+
+      if (artistData) setFullArtist(artistData)
+      if (influencersData) setInfluencers(influencersData)
+      if (influencedData) setInfluenced(influencedData)
 
       // Fetch sources for all influences
       const allInfluences = [

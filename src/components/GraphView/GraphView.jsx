@@ -3,6 +3,8 @@ import { useTranslation } from 'react-i18next'
 import cytoscape from 'cytoscape'
 import dagre from 'cytoscape-dagre'
 import { supabase } from '../../lib/supabase.js'
+import { getCached, setCache } from '../../lib/cache.js'
+import { getVisibleCount } from '../../utils/graph-utils.js'
 import { graphStyles } from './graph-styles.js'
 import './GraphView.css'
 
@@ -15,15 +17,6 @@ const LAYOUT_OPTIONS = {
   rankSep: 80,
   animate: true,
   animationDuration: 400,
-}
-
-// filterLevel 0.0–1.0 → visible neighbor count
-function getVisibleCount(filterLevel) {
-  if (filterLevel < 0.2) return 3
-  if (filterLevel < 0.4) return 5
-  if (filterLevel < 0.6) return 10
-  if (filterLevel < 0.8) return 20
-  return Infinity
 }
 
 const FILTER_STEP = 0.15
@@ -41,6 +34,8 @@ export default function GraphView({ rootArtistId, onSelectArtist }) {
   const [nodeCount, setNodeCount] = useState(0)
   const [semanticZoomActive, setSemanticZoomActive] = useState(false)
   const [filterLevel, setFilterLevel] = useState(0.5)
+  const [tooltip, setTooltip] = useState(null)
+  const tooltipTimerRef = useRef(null)
 
   const applySemanticZoom = useCallback((cy, selectedId, level) => {
     if (!cy || !selectedId) return
@@ -141,15 +136,21 @@ export default function GraphView({ rootArtistId, onSelectArtist }) {
     if (isRoot) setLoading(true)
 
     try {
-      const { data: artist, error: artistErr } = await supabase
-        .from('artists')
-        .select('*')
-        .eq('id', artistId)
-        .single()
-
-      if (artistErr || !artist) {
-        if (isRoot) setError(t('graph.error_not_found'))
-        return
+      // Check cache first
+      const cacheKey = `artist:${artistId}`
+      let artist = getCached(cacheKey)
+      if (!artist) {
+        const { data, error: artistErr } = await supabase
+          .from('artists')
+          .select('*')
+          .eq('id', artistId)
+          .single()
+        if (artistErr || !data) {
+          if (isRoot) setError(t('graph.error_not_found'))
+          return
+        }
+        artist = data
+        setCache(cacheKey, artist)
       }
 
       const cy = cyRef.current
@@ -157,22 +158,31 @@ export default function GraphView({ rootArtistId, onSelectArtist }) {
 
       addArtistNode(cy, artist, isRoot)
 
-      const [influencersRes, influencedRes] = await Promise.all([
-        supabase
-          .from('influences')
-          .select(`
-            id, influence_type, trust_level,
-            influencer:influencer_id (id, name, name_ja, genres, birth_year, death_year, image_url)
-          `)
-          .eq('influenced_id', artistId),
-        supabase
-          .from('influences')
-          .select(`
-            id, influence_type, trust_level,
-            influenced:influenced_id (id, name, name_ja, genres, birth_year, death_year, image_url)
-          `)
-          .eq('influencer_id', artistId),
-      ])
+      const infCacheKey = `influences:${artistId}`
+      let cached = getCached(infCacheKey)
+      let influencersRes, influencedRes
+      if (cached) {
+        influencersRes = cached.influencersRes
+        influencedRes = cached.influencedRes
+      } else {
+        ;[influencersRes, influencedRes] = await Promise.all([
+          supabase
+            .from('influences')
+            .select(`
+              id, influence_type, trust_level,
+              influencer:influencer_id (id, name, name_ja, genres, birth_year, death_year, image_url)
+            `)
+            .eq('influenced_id', artistId),
+          supabase
+            .from('influences')
+            .select(`
+              id, influence_type, trust_level,
+              influenced:influenced_id (id, name, name_ja, genres, birth_year, death_year, image_url)
+            `)
+            .eq('influencer_id', artistId),
+        ])
+        setCache(infCacheKey, { influencersRes, influencedRes })
+      }
 
       const newNodes = []
       const newEdges = []
@@ -360,6 +370,29 @@ export default function GraphView({ rootArtistId, onSelectArtist }) {
       }
     })
 
+    // Tooltip on mouseover
+    cy.on('mouseover', 'node', (evt) => {
+      const node = evt.target
+      const d = node.data()
+      const pos = node.renderedPosition()
+      clearTimeout(tooltipTimerRef.current)
+      tooltipTimerRef.current = setTimeout(() => {
+        setTooltip({
+          x: pos.x,
+          y: pos.y,
+          name: d.name_ja || d.name,
+          nameEn: d.name_ja ? d.name : null,
+          genres: d.genres,
+          birthYear: d.birth_year,
+        })
+      }, 300)
+    })
+
+    cy.on('mouseout', 'node', () => {
+      clearTimeout(tooltipTimerRef.current)
+      setTooltip(null)
+    })
+
     // Wheel handler: when semantic zoom active, change filter level instead of zoom
     const container = containerRef.current
     const handleWheel = (e) => {
@@ -487,6 +520,20 @@ export default function GraphView({ rootArtistId, onSelectArtist }) {
           <span className="legend-dot" style={{ background: '#8a8880' }} /> {t('influence_type.personal')}
         </div>
       </div>
+
+      {tooltip && (
+        <div
+          className="graph-tooltip"
+          style={{ left: tooltip.x, top: tooltip.y }}
+        >
+          <div className="tooltip-name">{tooltip.name}</div>
+          {tooltip.nameEn && <div className="tooltip-name-en">{tooltip.nameEn}</div>}
+          {tooltip.genres?.length > 0 && (
+            <div className="tooltip-genre">{tooltip.genres.slice(0, 2).join(', ')}</div>
+          )}
+          {tooltip.birthYear && <div className="tooltip-year">{tooltip.birthYear}–</div>}
+        </div>
+      )}
 
       <div className="graph-view" ref={containerRef} />
     </div>

@@ -191,6 +191,52 @@
   to { opacity: 1; transform: scale(1); }
 }
 
+/* Node tooltip */
+.graph-tooltip {
+  position: absolute;
+  z-index: 30;
+  transform: translate(-50%, calc(-100% - 16px));
+  background: var(--ink-charcoal);
+  border: 1px solid var(--border);
+  padding: 8px 12px;
+  pointer-events: none;
+  animation: tooltip-in 0.15s ease-out;
+  max-width: 200px;
+}
+
+.tooltip-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--paper-texture);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tooltip-name-en {
+  font-size: 11px;
+  color: var(--paper-muted);
+  font-style: italic;
+}
+
+.tooltip-genre {
+  font-size: 10px;
+  color: var(--sage);
+  margin-top: 2px;
+  letter-spacing: 0.03em;
+}
+
+.tooltip-year {
+  font-size: 10px;
+  color: var(--paper-muted);
+  font-style: italic;
+}
+
+@keyframes tooltip-in {
+  from { opacity: 0; transform: translate(-50%, calc(-100% - 12px)); }
+  to { opacity: 1; transform: translate(-50%, calc(-100% - 16px)); }
+}
+
 @media (max-width: 768px) {
   .graph-legend {
     display: none;
@@ -210,5 +256,8 @@
   .sz-indicator {
     bottom: 8px;
     right: 8px;
+  }
+  .graph-tooltip {
+    display: none;
   }
 }

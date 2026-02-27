@@ -34,5 +34,16 @@
     "philosophical": "思想的",
     "aesthetic": "美学的",
     "personal": "人的"
+  },
+  "share": {
+    "copied": "URLをコピーしました",
+    "button": "共有"
+  },
+  "onboarding": {
+    "title": "影響マップの使い方",
+    "tip1": "アーティストをクリックして影響関係を展開",
+    "tip2": "スクロールで表示ノード数を調整",
+    "tip3": "背景クリックでフィルター解除",
+    "dismiss": "はじめる"
   }
 }
