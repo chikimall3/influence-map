@@ -39,6 +39,7 @@ export const graphStyles = [
       'text-wrap': 'ellipsis',
       'transition-property': 'opacity, text-opacity',
       'transition-duration': '0.25s',
+      'transition-timing-function': 'ease-out',
     },
   },
   // Nodes with images
@@ -102,6 +103,7 @@ export const graphStyles = [
       'arrow-scale': 0.8,
       'transition-property': 'opacity',
       'transition-duration': '0.25s',
+      'transition-timing-function': 'ease-out',
     },
   },
   // Connected edges highlight on node select
