@@ -370,6 +370,91 @@ async function run() {
   )
 
   // -----------------------------------------------------------------------
+  // TEST 8: Viewport stability after node tap (no shaking)
+  // -----------------------------------------------------------------------
+  // Re-enter semantic zoom by tapping a non-root node
+  const tapResult2 = await page.evaluate(() => {
+    const cy = document.querySelector('.graph-view')._cyreg.cy
+    const nonRoot = cy.nodes().filter(n => !n.data('isRoot'))
+    if (nonRoot.length === 0) return { ok: false, reason: 'no non-root nodes' }
+    const target = nonRoot[0]
+    target.emit('tap')
+    return { ok: true, label: target.data('label') }
+  })
+
+  // Wait for ALL animations to fully complete (layout 400ms + debounce 150ms + fit 300ms + margin)
+  await sleep(1500)
+
+  if (!tapResult2.ok) {
+    record('TEST 8: Viewport stable after node tap', false, tapResult2.reason)
+  } else {
+    // Sample viewport at two points separated by 500ms — if stable, they should match
+    const snap1 = await page.evaluate(() => {
+      const cy = document.querySelector('.graph-view')._cyreg.cy
+      const p = cy.pan()
+      return { px: Math.round(p.x * 100) / 100, py: Math.round(p.y * 100) / 100, z: Math.round(cy.zoom() * 1000) / 1000 }
+    })
+
+    await sleep(600)
+
+    const snap2 = await page.evaluate(() => {
+      const cy = document.querySelector('.graph-view')._cyreg.cy
+      const p = cy.pan()
+      return { px: Math.round(p.x * 100) / 100, py: Math.round(p.y * 100) / 100, z: Math.round(cy.zoom() * 1000) / 1000 }
+    })
+
+    const panDrift = Math.abs(snap1.px - snap2.px) + Math.abs(snap1.py - snap2.py)
+    const zoomDrift = Math.abs(snap1.z - snap2.z)
+    const isStable = panDrift < 1 && zoomDrift < 0.01
+
+    record(
+      'TEST 8: Viewport stable after node tap',
+      isStable,
+      `snap1=(${snap1.px},${snap1.py},z${snap1.z}) snap2=(${snap2.px},${snap2.py},z${snap2.z}) drift=pan:${panDrift.toFixed(2)},zoom:${zoomDrift.toFixed(4)}`
+    )
+  }
+
+  // -----------------------------------------------------------------------
+  // TEST 9: Viewport stability after rapid wheel events (no shaking)
+  // -----------------------------------------------------------------------
+  // Send 5 rapid wheel events
+  await page.evaluate(() => {
+    const container = document.querySelector('.graph-view')
+    for (let i = 0; i < 5; i++) {
+      container.dispatchEvent(
+        new WheelEvent('wheel', { deltaY: -120, bubbles: true, cancelable: true })
+      )
+    }
+  })
+
+  // Wait for debounce (150ms) + fit animation (300ms) + margin
+  await sleep(1000)
+
+  const wSnap1 = await page.evaluate(() => {
+    const cy = document.querySelector('.graph-view')._cyreg.cy
+    const p = cy.pan()
+    return { px: Math.round(p.x * 100) / 100, py: Math.round(p.y * 100) / 100, z: Math.round(cy.zoom() * 1000) / 1000 }
+  })
+
+  await sleep(600)
+
+  const wSnap2 = await page.evaluate(() => {
+    const cy = document.querySelector('.graph-view')._cyreg.cy
+    const p = cy.pan()
+    return { px: Math.round(p.x * 100) / 100, py: Math.round(p.y * 100) / 100, z: Math.round(cy.zoom() * 1000) / 1000 }
+  })
+
+  const wPanDrift = Math.abs(wSnap1.px - wSnap2.px) + Math.abs(wSnap1.py - wSnap2.py)
+  const wZoomDrift = Math.abs(wSnap1.z - wSnap2.z)
+  const wIsStable = wPanDrift < 1 && wZoomDrift < 0.01
+
+  record(
+    'TEST 9: Viewport stable after rapid wheel',
+    wIsStable,
+    `snap1=(${wSnap1.px},${wSnap1.py},z${wSnap1.z}) snap2=(${wSnap2.px},${wSnap2.py},z${wSnap2.z}) drift=pan:${wPanDrift.toFixed(2)},zoom:${wZoomDrift.toFixed(4)}`
+  )
+
+  // -----------------------------------------------------------------------
   // Summary
   // -----------------------------------------------------------------------
   printSummary()

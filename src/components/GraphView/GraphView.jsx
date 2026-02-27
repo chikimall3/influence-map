@@ -39,7 +39,8 @@ export default function GraphView({ rootArtistId, onSelectArtist }) {
   const [activeEdgeFilter, setActiveEdgeFilter] = useState(null)
   const [pathMode, setPathMode] = useState(false)
   const pathStartRef = useRef(null)
-  const prevMaxVisibleRef = useRef(null)
+  const isLayoutRunningRef = useRef(false)
+  const fitTimerRef = useRef(null)
 
   const applySemanticZoom = useCallback((cy, selectedId, level) => {
     if (!cy || !selectedId) return
@@ -89,20 +90,20 @@ export default function GraphView({ rootArtistId, onSelectArtist }) {
       })
     })
 
-    // Only re-fit when the visible node count actually changes
-    const shouldAnimate = maxVisible !== prevMaxVisibleRef.current
-    prevMaxVisibleRef.current = maxVisible
-
-    if (shouldAnimate) {
-      const visibleNodes = cy.nodes('.sz-focus, .sz-neighbor')
-      if (visibleNodes.length > 0) {
-        cy.stop()
-        cy.animate({
-          fit: { eles: visibleNodes, padding: 50 },
-          duration: 300,
-          easing: 'ease-out',
-        })
-      }
+    // Debounced fit — skip during layout animation to prevent shaking
+    clearTimeout(fitTimerRef.current)
+    if (!isLayoutRunningRef.current) {
+      fitTimerRef.current = setTimeout(() => {
+        const visibleNodes = cy.nodes('.sz-focus, .sz-neighbor')
+        if (visibleNodes.length > 0) {
+          cy.stop()
+          cy.animate({
+            fit: { eles: visibleNodes, padding: 50 },
+            duration: 300,
+            easing: 'ease-out',
+          })
+        }
+      }, 150)
     }
   }, [])
 
@@ -111,9 +112,9 @@ export default function GraphView({ rootArtistId, onSelectArtist }) {
     cy.batch(() => {
       cy.elements().removeClass(SZ_CLASSES)
     })
+    clearTimeout(fitTimerRef.current)
     selectedNodeRef.current = null
     filterLevelRef.current = 0.5
-    prevMaxVisibleRef.current = null
     setFilterLevel(0.5)
     setSemanticZoomActive(false)
     // Re-enable normal zoom
@@ -285,7 +286,9 @@ export default function GraphView({ rootArtistId, onSelectArtist }) {
         }
 
         const layout = cy.layout(LAYOUT_OPTIONS)
+        isLayoutRunningRef.current = true
         layout.on('layoutstop', () => {
+          isLayoutRunningRef.current = false
           cy.nodes().forEach(n => {
             n.data('connectionCount', n.degree())
           })
@@ -403,7 +406,6 @@ export default function GraphView({ rootArtistId, onSelectArtist }) {
       // Normal mode: activate semantic zoom
       selectedNodeRef.current = nodeData.id
       filterLevelRef.current = 0.5
-      prevMaxVisibleRef.current = null
       setFilterLevel(0.5)
       setSemanticZoomActive(true)
       cy.userZoomingEnabled(false)
@@ -466,6 +468,7 @@ export default function GraphView({ rootArtistId, onSelectArtist }) {
     }
 
     return () => {
+      clearTimeout(fitTimerRef.current)
       container.removeEventListener('wheel', handleWheel)
       cy.destroy()
     }
