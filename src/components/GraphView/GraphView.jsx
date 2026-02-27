@@ -95,15 +95,17 @@ export default function GraphView({ rootArtistId, onSelectArtist }) {
     // Ensure zoom stays disabled during SZ mode
     cy.userZoomingEnabled(false)
 
-    // Always re-layout visible neighbors in centered tree form
+    // Re-layout visible neighbors in centered tree form
     if (!isLayoutRunningRef.current) {
-      const ext = cy.extent()
-      const centerX = (ext.x1 + ext.x2) / 2
-      const centerY = (ext.y1 + ext.y2) / 2
       const vertSpacing = 140
       const colSpacing = 100
 
-      // Only reposition visible neighbors (sorted already has all, slice to maxVisible)
+      // On initial tap: use viewport center. On wheel: use focus node's stable position.
+      const focusPos = selectedNode.position()
+      const centerX = fit ? (cy.extent().x1 + cy.extent().x2) / 2 : focusPos.x
+      const centerY = fit ? (cy.extent().y1 + cy.extent().y2) / 2 : focusPos.y
+
+      // Only reposition visible neighbors
       const visibleSorted = sorted.slice(0, maxVisible)
 
       // Separate influencers (source→selected) vs influenced (selected→target)
@@ -123,12 +125,16 @@ export default function GraphView({ rootArtistId, onSelectArtist }) {
       // Place focus node at center
       selectedNode.position({ x: centerX, y: centerY })
 
-      // Place nodes from center outward: index 0 at center, 1 right, 2 left, ...
+      // Place nodes from center outward: 0=center, 1=right, 2=left, 3=right2, ...
       const centerOutward = (nodes, cx, rowY) => {
         nodes.forEach((node, i) => {
-          const ring = Math.ceil((i + 1) / 2)
-          const side = i === 0 ? 0 : (i % 2 === 1 ? 1 : -1)
-          node.position({ x: cx + side * ring * colSpacing, y: rowY })
+          if (i === 0) {
+            node.position({ x: cx, y: rowY })
+          } else {
+            const slot = Math.ceil(i / 2)
+            const side = i % 2 === 1 ? 1 : -1
+            node.position({ x: cx + side * slot * colSpacing, y: rowY })
+          }
         })
       }
 
@@ -142,25 +148,28 @@ export default function GraphView({ rootArtistId, onSelectArtist }) {
         centerOutward(influenced, centerX, centerY + vertSpacing)
       }
 
-      clearTimeout(fitTimerRef.current)
-      szFittingRef.current = true
-      fitTimerRef.current = setTimeout(() => {
-        const visibleNodes = cy.nodes('.sz-focus, .sz-neighbor')
-        if (visibleNodes.length > 0) {
-          cy.stop()
-          cy.animate({
-            fit: { eles: visibleNodes, padding: 50 },
-            duration: 300,
-            easing: 'ease-out',
-            complete: () => {
-              szLockedZoomRef.current = cy.zoom()
-              szFittingRef.current = false
-            },
-          })
-        } else {
-          szFittingRef.current = false
-        }
-      }, 150)
+      // Only fit viewport on initial activation (tap), NOT on every wheel scroll
+      if (fit) {
+        clearTimeout(fitTimerRef.current)
+        szFittingRef.current = true
+        fitTimerRef.current = setTimeout(() => {
+          const visibleNodes = cy.nodes('.sz-focus, .sz-neighbor')
+          if (visibleNodes.length > 0) {
+            cy.stop()
+            cy.animate({
+              fit: { eles: visibleNodes, padding: 50 },
+              duration: 300,
+              easing: 'ease-out',
+              complete: () => {
+                szLockedZoomRef.current = cy.zoom()
+                szFittingRef.current = false
+              },
+            })
+          } else {
+            szFittingRef.current = false
+          }
+        }, 150)
+      }
     }
   }, [])
 
