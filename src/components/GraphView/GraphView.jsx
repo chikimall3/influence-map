@@ -41,6 +41,8 @@ export default function GraphView({ rootArtistId, onSelectArtist }) {
   const pathStartRef = useRef(null)
   const isLayoutRunningRef = useRef(false)
   const fitTimerRef = useRef(null)
+  const szLockedZoomRef = useRef(null)
+  const szFittingRef = useRef(false)
 
   const applySemanticZoom = useCallback((cy, selectedId, level, { fit = false } = {}) => {
     if (!cy || !selectedId) return
@@ -90,9 +92,13 @@ export default function GraphView({ rootArtistId, onSelectArtist }) {
       })
     })
 
+    // Ensure zoom stays disabled during SZ mode
+    cy.userZoomingEnabled(false)
+
     // Only fit camera on initial activation (not on every wheel scroll)
     if (fit && !isLayoutRunningRef.current) {
       clearTimeout(fitTimerRef.current)
+      szFittingRef.current = true
       fitTimerRef.current = setTimeout(() => {
         const visibleNodes = cy.nodes('.sz-focus, .sz-neighbor')
         if (visibleNodes.length > 0) {
@@ -101,7 +107,13 @@ export default function GraphView({ rootArtistId, onSelectArtist }) {
             fit: { eles: visibleNodes, padding: 50 },
             duration: 300,
             easing: 'ease-out',
+            complete: () => {
+              szLockedZoomRef.current = cy.zoom()
+              szFittingRef.current = false
+            },
           })
+        } else {
+          szFittingRef.current = false
         }
       }, 150)
     }
@@ -117,6 +129,8 @@ export default function GraphView({ rootArtistId, onSelectArtist }) {
     filterLevelRef.current = 0.5
     setFilterLevel(0.5)
     setSemanticZoomActive(false)
+    szLockedZoomRef.current = null
+    szFittingRef.current = false
     // Re-enable normal zoom
     cy.userZoomingEnabled(true)
     cy.userPanningEnabled(true)
@@ -412,6 +426,8 @@ export default function GraphView({ rootArtistId, onSelectArtist }) {
       setFilterLevel(0.5)
       setSemanticZoomActive(true)
       cy.userZoomingEnabled(false)
+      szLockedZoomRef.current = cy.zoom()
+      szFittingRef.current = false
 
       if (nodeData.hasChildren !== false) {
         // Load with no dagre animation — layoutstop will apply SZ + fit
@@ -460,13 +476,23 @@ export default function GraphView({ rootArtistId, onSelectArtist }) {
       setTooltip(null)
     })
 
-    // Wheel handler: capture phase to intercept BEFORE Cytoscape processes zoom
+    // Zoom guard: forcibly reset zoom if something changes it during SZ mode
+    cy.on('zoom', () => {
+      if (selectedNodeRef.current && szLockedZoomRef.current != null && !szFittingRef.current) {
+        const diff = Math.abs(cy.zoom() - szLockedZoomRef.current)
+        if (diff > 0.001) {
+          cy.zoom(szLockedZoomRef.current)
+        }
+      }
+    })
+
+    // Wheel handler: capture phase + stopImmediatePropagation to block ALL other listeners
     const container = containerRef.current
     const handleWheel = (e) => {
       if (!selectedNodeRef.current) return
-      // Block the event completely so Cytoscape never sees it
+      // stopImmediatePropagation blocks same-element listeners (Cytoscape's handler)
       e.preventDefault()
-      e.stopPropagation()
+      e.stopImmediatePropagation()
 
       const delta = e.deltaY > 0 ? -FILTER_STEP : FILTER_STEP
       const newLevel = Math.max(0, Math.min(1, filterLevelRef.current + delta))
