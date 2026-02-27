@@ -460,19 +460,22 @@ export default function GraphView({ rootArtistId, onSelectArtist }) {
       setTooltip(null)
     })
 
-    // Wheel handler: when semantic zoom active, change filter level instead of zoom
+    // Wheel handler: capture phase to intercept BEFORE Cytoscape processes zoom
     const container = containerRef.current
     const handleWheel = (e) => {
       if (!selectedNodeRef.current) return
+      // Block the event completely so Cytoscape never sees it
       e.preventDefault()
+      e.stopPropagation()
 
       const delta = e.deltaY > 0 ? -FILTER_STEP : FILTER_STEP
       const newLevel = Math.max(0, Math.min(1, filterLevelRef.current + delta))
+      if (newLevel === filterLevelRef.current) return // already at limit
       filterLevelRef.current = newLevel
       setFilterLevel(newLevel)
       applySemanticZoom(cy, selectedNodeRef.current, newLevel)
     }
-    container.addEventListener('wheel', handleWheel, { passive: false })
+    container.addEventListener('wheel', handleWheel, { passive: false, capture: true })
 
     if (rootArtistId) {
       loadArtistConnections(rootArtistId, { isRoot: true })
@@ -480,7 +483,7 @@ export default function GraphView({ rootArtistId, onSelectArtist }) {
 
     return () => {
       clearTimeout(fitTimerRef.current)
-      container.removeEventListener('wheel', handleWheel)
+      container.removeEventListener('wheel', handleWheel, { capture: true })
       cy.destroy()
     }
   }, [rootArtistId, loadArtistConnections, onSelectArtist, applySemanticZoom, clearSemanticZoom])
