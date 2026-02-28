@@ -43,6 +43,7 @@ export default function GraphView({ rootArtistId, onSelectArtist }) {
   const fitTimerRef = useRef(null)
   const szLockedZoomRef = useRef(null)
   const szFittingRef = useRef(false)
+  const savedFilterLevels = useRef(new Map()) // nodeId -> filterLevel
 
   const applySemanticZoom = useCallback((cy, selectedId, level, { fit = false } = {}) => {
     if (!cy || !selectedId) return
@@ -185,6 +186,10 @@ export default function GraphView({ rootArtistId, onSelectArtist }) {
   // Exit SZ interactive mode but KEEP filter results on the map
   const exitSemanticZoomKeepResults = useCallback((cy) => {
     if (!cy) return
+    // Save filter level for this node so it restores on re-select
+    if (selectedNodeRef.current) {
+      savedFilterLevels.current.set(selectedNodeRef.current, filterLevelRef.current)
+    }
     clearTimeout(fitTimerRef.current)
     selectedNodeRef.current = null
     setSemanticZoomActive(false)
@@ -481,8 +486,10 @@ export default function GraphView({ rootArtistId, onSelectArtist }) {
 
       // Normal mode: activate semantic zoom BEFORE loading
       selectedNodeRef.current = nodeData.id
-      filterLevelRef.current = 0.5
-      setFilterLevel(0.5)
+      // Restore saved filter level for this node, or default to 0.5
+      const restoredLevel = savedFilterLevels.current.get(nodeData.id) ?? 0.5
+      filterLevelRef.current = restoredLevel
+      setFilterLevel(restoredLevel)
       setSemanticZoomActive(true)
       cy.userZoomingEnabled(false)
       szLockedZoomRef.current = cy.zoom()
@@ -494,7 +501,7 @@ export default function GraphView({ rootArtistId, onSelectArtist }) {
         // layoutstop already called applySemanticZoom, nothing more to do
       } else {
         // Already loaded, apply SZ with fit
-        applySemanticZoom(cy, nodeData.id, 0.5, { fit: true })
+        applySemanticZoom(cy, nodeData.id, restoredLevel, { fit: true })
       }
     })
 
