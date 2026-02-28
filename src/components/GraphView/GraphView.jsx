@@ -20,6 +20,7 @@ const LAYOUT_OPTIONS = {
 }
 
 const FILTER_STEP = 0.02
+const MAX_CONNECTIONS = 15 // Max connections to load per artist
 const SZ_CLASSES = 'sz-focus sz-neighbor sz-dimmed sz-hidden sz-visible-edge'
 
 export default function GraphView({ rootArtistId, onSelectArtist }) {
@@ -262,14 +263,16 @@ export default function GraphView({ rootArtistId, onSelectArtist }) {
               id, influence_type, trust_level,
               influencer:influencer_id (id, name, name_ja, genres, birth_year, death_year, image_url)
             `)
-            .eq('influenced_id', artistId),
+            .eq('influenced_id', artistId)
+            .limit(MAX_CONNECTIONS),
           supabase
             .from('influences')
             .select(`
               id, influence_type, trust_level,
               influenced:influenced_id (id, name, name_ja, genres, birth_year, death_year, image_url)
             `)
-            .eq('influencer_id', artistId),
+            .eq('influencer_id', artistId)
+            .limit(MAX_CONNECTIONS),
         ])
         setCache(infCacheKey, { influencersRes, influencedRes })
       }
