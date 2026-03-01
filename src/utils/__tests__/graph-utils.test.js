@@ -2,8 +2,8 @@ import { describe, it, expect } from 'vitest'
 import { getVisibleCount } from '../graph-utils.js'
 
 describe('getVisibleCount', () => {
-  it('returns 3 at level 0', () => {
-    expect(getVisibleCount(0)).toBe(3)
+  it('returns 1 at level 0', () => {
+    expect(getVisibleCount(0)).toBe(1)
   })
   it('returns Infinity at level >= 0.95', () => {
     expect(getVisibleCount(0.95)).toBe(Infinity)
@@ -23,7 +23,7 @@ describe('getVisibleCount', () => {
     expect(count).toBeLessThanOrEqual(28)
   })
   it('handles edge cases', () => {
-    expect(getVisibleCount(-1)).toBe(3)
+    expect(getVisibleCount(-1)).toBe(1)
     expect(getVisibleCount(1)).toBe(Infinity)
   })
 })

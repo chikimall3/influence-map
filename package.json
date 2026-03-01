@@ -12,10 +12,12 @@
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.97.0",
+    "@tanstack/react-query": "^5.90.21",
     "cytoscape": "^3.33.1",
     "cytoscape-dagre": "^2.5.0",
     "dagre": "^0.8.5",
     "i18next": "^25.8.13",
+    "localforage": "^1.10.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "react-i18next": "^16.5.4",
@@ -23,6 +25,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",
+    "@ffmpeg-installer/ffmpeg": "^1.1.0",
     "@types/react": "^19.2.7",
     "@types/react-dom": "^19.2.3",
     "@vercel/analytics": "^1.6.1",

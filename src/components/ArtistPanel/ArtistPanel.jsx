@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
+import { useQuery } from '@tanstack/react-query'
 import { supabase } from '../../lib/supabase.js'
-import { getCached, setCache } from '../../lib/cache.js'
 import './ArtistPanel.css'
 
 const TRUST_CONFIG = {
@@ -20,71 +20,50 @@ const TRUST_DOT_COLORS = {
   community: '#8a8880',
 }
 
+async function fetchPanelData(artistId) {
+  const [artistRes, influencersRes, influencedRes] = await Promise.all([
+    supabase.from('artists').select('*').eq('id', artistId).single(),
+    supabase
+      .from('influences')
+      .select(`id, influence_type, trust_level, influencer:influencer_id (id, name, name_ja)`)
+      .eq('influenced_id', artistId),
+    supabase
+      .from('influences')
+      .select(`id, influence_type, trust_level, influenced:influenced_id (id, name, name_ja)`)
+      .eq('influencer_id', artistId),
+  ])
+
+  const artistData = artistRes.data
+  const influencersData = influencersRes.data || []
+  const influencedData = influencedRes.data || []
+
+  let sourcesData = []
+  const allInfluences = [...influencersData, ...influencedData]
+  if (allInfluences.length > 0) {
+    const infIds = allInfluences.map((i) => i.id)
+    const { data: srcData } = await supabase
+      .from('sources')
+      .select('*')
+      .in('influence_id', infIds)
+    if (srcData) sourcesData = srcData
+  }
+
+  return { artist: artistData, influencers: influencersData, influenced: influencedData, sources: sourcesData }
+}
+
 export default function ArtistPanel({ artist, onClose, onNavigate }) {
   const { t } = useTranslation()
-  const [fullArtist, setFullArtist] = useState(null)
-  const [influencers, setInfluencers] = useState([])
-  const [influenced, setInfluenced] = useState([])
-  const [sources, setSources] = useState([])
-  const [loadingPanel, setLoadingPanel] = useState(false)
 
-  useEffect(() => {
-    if (!artist?.id) return
+  const { data: panelData, isLoading: loadingPanel } = useQuery({
+    queryKey: ['panel', artist?.id],
+    queryFn: () => fetchPanelData(artist.id),
+    enabled: !!artist?.id,
+  })
 
-    setLoadingPanel(true)
-
-    async function fetchDetails() {
-      const panelCacheKey = `panel:${artist.id}`
-      const cached = getCached(panelCacheKey)
-
-      let artistData, influencersData, influencedData
-
-      if (cached) {
-        artistData = cached.artist
-        influencersData = cached.influencers
-        influencedData = cached.influenced
-      } else {
-        const [artistRes, influencersRes, influencedRes] = await Promise.all([
-          supabase.from('artists').select('*').eq('id', artist.id).single(),
-          supabase
-            .from('influences')
-            .select(`id, influence_type, trust_level, influencer:influencer_id (id, name, name_ja)`)
-            .eq('influenced_id', artist.id),
-          supabase
-            .from('influences')
-            .select(`id, influence_type, trust_level, influenced:influenced_id (id, name, name_ja)`)
-            .eq('influencer_id', artist.id),
-        ])
-        artistData = artistRes.data
-        influencersData = influencersRes.data
-        influencedData = influencedRes.data
-        setCache(panelCacheKey, { artist: artistData, influencers: influencersData, influenced: influencedData })
-      }
-
-      if (artistData) setFullArtist(artistData)
-      if (influencersData) setInfluencers(influencersData)
-      if (influencedData) setInfluenced(influencedData)
-
-      // Fetch sources for all influences
-      const allInfluences = [
-        ...(influencersData || []),
-        ...(influencedData || []),
-      ]
-      if (allInfluences.length > 0) {
-        const infIds = allInfluences.map((i) => i.id)
-        const { data: srcData } = await supabase
-          .from('sources')
-          .select('*')
-          .in('influence_id', infIds)
-
-        if (srcData) setSources(srcData)
-      }
-
-      setLoadingPanel(false)
-    }
-
-    fetchDetails()
-  }, [artist?.id])
+  const fullArtist = panelData?.artist || null
+  const influencers = panelData?.influencers || []
+  const influenced = panelData?.influenced || []
+  const sources = panelData?.sources || []
 
   if (!artist) return null
 

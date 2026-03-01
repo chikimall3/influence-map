@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
+import { useQuery } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase.js'
 import SearchBar from '../components/SearchBar/SearchBar.jsx'
 import './Home.css'
@@ -31,24 +31,21 @@ const FALLBACK_ARTISTS = [
 export default function Home() {
   const navigate = useNavigate()
   const { t } = useTranslation()
-  const [featured, setFeatured] = useState(FALLBACK_ARTISTS)
 
-  useEffect(() => {
-    async function fetchFeatured() {
-      // Fetch curated musicians from DB
+  const { data: featured = FALLBACK_ARTISTS } = useQuery({
+    queryKey: ['featured-artists'],
+    queryFn: async () => {
       const { data: artists } = await supabase
         .from('artists')
         .select('id, name, name_ja, image_url')
         .in('id', CURATED_MUSICIAN_IDS)
-
       if (artists && artists.length >= 6) {
-        // Shuffle and pick 6
-        const shuffled = artists.sort(() => Math.random() - 0.5).slice(0, 6)
-        setFeatured(shuffled)
+        return artists.sort(() => Math.random() - 0.5).slice(0, 6)
       }
-    }
-    fetchFeatured()
-  }, [])
+      return FALLBACK_ARTISTS
+    },
+    staleTime: 60 * 60 * 1000,
+  })
 
   const handleSelectArtist = (artist) => {
     navigate(`/artist/${artist.id}`)
