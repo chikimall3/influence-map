@@ -8,10 +8,17 @@
   max-width: 320px;
 }
 
+.search-input-row {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
 .search-input {
   width: 100%;
   padding: 12px 16px;
   padding-left: 40px;
+  padding-right: 40px;
   background: var(--ink-lighter);
   border: 1px solid var(--border);
   font-size: 14px;
@@ -21,6 +28,7 @@
 
 .compact .search-input {
   padding: 8px 12px 8px 36px;
+  padding-right: 36px;
   font-size: 13px;
 }
 
@@ -41,6 +49,7 @@
   color: var(--paper-muted);
   font-size: 18px;
   pointer-events: none;
+  z-index: 1;
 }
 
 .compact .search-icon {
@@ -48,6 +57,140 @@
   font-size: 16px;
 }
 
+/* Filter toggle button */
+.filter-toggle {
+  position: absolute;
+  right: 4px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  color: var(--paper-muted);
+  transition: color 0.15s;
+  z-index: 1;
+}
+
+.filter-toggle:hover {
+  color: var(--paper-texture);
+}
+
+.filter-toggle.filter-active {
+  color: var(--sage);
+}
+
+.filter-toggle .material-symbols-outlined {
+  font-size: 18px;
+}
+
+/* Active filter badges */
+.active-filters {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+  flex-wrap: wrap;
+}
+
+.filter-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  background: rgba(125, 163, 141, 0.15);
+  border: 1px solid rgba(125, 163, 141, 0.25);
+  color: var(--sage);
+  font-size: 11px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.filter-badge:hover {
+  background: rgba(125, 163, 141, 0.25);
+}
+
+.badge-x {
+  font-size: 13px;
+  opacity: 0.7;
+}
+
+.filter-clear {
+  font-size: 10px;
+  color: var(--paper-muted);
+  padding: 2px 6px;
+  transition: color 0.15s;
+}
+
+.filter-clear:hover {
+  color: var(--paper-texture);
+}
+
+/* Filter panel dropdown */
+.filter-panel {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  background: var(--ink-charcoal);
+  border: 1px solid var(--border);
+  padding: 12px;
+  z-index: 201;
+  animation: filter-in 0.15s ease-out;
+}
+
+@keyframes filter-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.filter-section {
+  margin-bottom: 10px;
+}
+
+.filter-section:last-child {
+  margin-bottom: 0;
+}
+
+.filter-label {
+  display: block;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--paper-muted);
+  margin-bottom: 6px;
+  font-weight: 600;
+}
+
+.filter-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.filter-chip {
+  padding: 3px 10px;
+  font-size: 11px;
+  color: var(--paper-muted);
+  border: 1px solid var(--border);
+  background: transparent;
+  transition: all 0.15s;
+  cursor: pointer;
+}
+
+.filter-chip:hover {
+  color: var(--paper-texture);
+  border-color: rgba(232, 228, 217, 0.15);
+}
+
+.filter-chip.chip-active {
+  background: rgba(125, 163, 141, 0.15);
+  border-color: rgba(125, 163, 141, 0.3);
+  color: var(--sage);
+}
+
+/* Search results */
 .search-results {
   position: absolute;
   top: calc(100% + 4px);
@@ -87,10 +230,22 @@
   font-style: italic;
 }
 
+.result-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+}
+
+.result-year {
+  font-size: 10px;
+  color: var(--paper-muted);
+  font-style: italic;
+}
+
 .result-genre {
   font-size: 10px;
   color: var(--paper-muted);
-  margin-left: auto;
   padding: 2px 8px;
   border: 1px solid var(--border);
   letter-spacing: 0.05em;
@@ -99,7 +254,7 @@
 /* Search spinner */
 .search-spinner {
   position: absolute;
-  right: 12px;
+  right: 40px;
   top: 50%;
   transform: translateY(-50%);
   width: 14px;
@@ -108,6 +263,7 @@
   border-top-color: var(--sage);
   border-radius: 50%;
   animation: search-spin 0.6s linear infinite;
+  z-index: 1;
 }
 
 @keyframes search-spin {
@@ -133,6 +289,16 @@
 
   .compact .search-input {
     padding: 10px 12px 10px 36px;
+    padding-right: 36px;
     min-height: 44px;
+  }
+
+  .filter-panel {
+    padding: 10px;
+  }
+
+  .filter-chip {
+    padding: 6px 12px;
+    font-size: 12px;
   }
 }
