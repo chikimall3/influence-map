@@ -6,7 +6,7 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'node',
-    include: ['src/**/__tests__/**/*.test.{js,jsx}'],
-    exclude: ['src/**/__tests__/**/*.integration.test.{js,jsx}'],
+    include: ['src/**/__tests__/**/*.test.{js,jsx,ts,tsx}'],
+    exclude: ['src/**/__tests__/**/*.integration.test.{js,jsx,ts,tsx}'],
   },
 })
