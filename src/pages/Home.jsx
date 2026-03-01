@@ -1,8 +1,8 @@
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useQuery } from '@tanstack/react-query'
-import { supabase } from '../lib/supabase.js'
-import SearchBar from '../components/SearchBar/SearchBar.jsx'
+import { supabase } from '../shared/lib/supabase.js'
+import SearchBar from '../features/artist-search/SearchBar.jsx'
 import './Home.css'
 
 // Curated musician IDs for featured section (confirmed in DB)

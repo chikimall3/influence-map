@@ -1,8 +1,8 @@
 import { useParams, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import SearchBar from '../components/SearchBar/SearchBar.jsx'
-import GraphView from '../components/GraphView/GraphView.jsx'
-import ArtistPanel from '../components/ArtistPanel/ArtistPanel.jsx'
+import SearchBar from '../features/artist-search/SearchBar.jsx'
+import GraphView from '../features/graph-explorer/GraphView.jsx'
+import ArtistPanel from '../features/artist-detail/ArtistPanel.jsx'
 import { useState, useEffect } from 'react'
 
 const ONBOARDING_KEY = 'influence-map-onboarded'

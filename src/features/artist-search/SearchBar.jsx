@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
-import { supabase } from '../../lib/supabase.js'
+import { supabase } from '../../shared/lib/supabase.js'
 import './SearchBar.css'
 
 const GENRE_OPTIONS = [

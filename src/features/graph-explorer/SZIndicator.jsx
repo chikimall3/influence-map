@@ -1,4 +1,4 @@
-import { getVisibleCount } from '../../utils/graph-utils.js'
+import { getVisibleCount } from '../../shared/utils/graph-utils.js'
 
 export default function SZIndicator({ filterLevel }) {
   const visibleCount = getVisibleCount(filterLevel)

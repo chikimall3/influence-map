@@ -1,5 +1,5 @@
 import { useCallback, useRef } from 'react'
-import { getVisibleCount } from '../../utils/graph-utils.js'
+import { getVisibleCount } from '../../shared/utils/graph-utils.js'
 
 const FILTER_STEP = 0.02
 const SZ_CLASSES = 'sz-focus sz-neighbor sz-dimmed sz-hidden sz-visible-edge'

@@ -1,6 +1,6 @@
 import { useCallback, useRef, useState } from 'react'
-import { supabase } from '../../lib/supabase.js'
-import { getCached, setCache } from '../../lib/cache.js'
+import { supabase } from '../../shared/lib/supabase.js'
+import { getCached, setCache } from '../../shared/lib/cache.js'
 
 const MAX_CONNECTIONS = 15
 const LAYOUT_OPTIONS = {

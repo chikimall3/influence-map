@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useQuery } from '@tanstack/react-query'
-import { supabase } from '../../lib/supabase.js'
+import { supabase } from '../../shared/lib/supabase.js'
 import './ArtistPanel.css'
 
 const TRUST_CONFIG = {
