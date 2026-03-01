@@ -311,9 +311,11 @@ async function run() {
   })
 
   // Dispatch more aggressive wheel events in the opposite direction
+  // Need 25+ scrolls: FILTER_STEP=0.02, from 0.5 need to reach ~0.26
+  // to get visibleCount < 15 (the max influenced per direction)
   await page.evaluate(() => {
     const container = document.querySelector('.graph-view')
-    for (let i = 0; i < 10; i++) {
+    for (let i = 0; i < 25; i++) {
       container.dispatchEvent(
         new WheelEvent('wheel', {
           deltaY: 200,
@@ -343,30 +345,31 @@ async function run() {
   )
 
   // -----------------------------------------------------------------------
-  // TEST 7: Background tap clears all sz- classes
+  // TEST 7: Background tap exits SZ mode but keeps results on map
+  //   exitSemanticZoomKeepResults preserves sz- classes while hiding
+  //   the indicator and re-enabling user zoom.
   // -----------------------------------------------------------------------
   await page.evaluate(() => {
     const cy = document.querySelector('.graph-view')._cyreg.cy
-    // Emit tap on the core (background). When evt.target === cy the handler
-    // calls clearSemanticZoom.
     cy.emit('tap')
   })
 
   await sleep(500)
 
-  const szAfterClear = await page.evaluate(() => {
+  const szAfterExit = await page.evaluate(() => {
     const cy = document.querySelector('.graph-view')._cyreg.cy
-    return cy.elements('.sz-focus, .sz-neighbor, .sz-dimmed, .sz-hidden, .sz-visible-edge').length
-  })
-
-  const indicatorGone = await page.evaluate(() => {
-    return !document.querySelector('.sz-indicator')
+    return {
+      indicatorGone: !document.querySelector('.sz-indicator'),
+      userZoomEnabled: cy.userZoomingEnabled(),
+      // Classes are preserved by exitSemanticZoomKeepResults
+      hasPreservedClasses: cy.elements('.sz-hidden, .sz-neighbor, .sz-dimmed').length > 0,
+    }
   })
 
   record(
-    'TEST 7: Background tap clears all sz- classes',
-    szAfterClear === 0 && indicatorGone,
-    `remaining sz- elements = ${szAfterClear}, indicator gone = ${indicatorGone}`
+    'TEST 7: Background tap exits SZ mode (keeps results)',
+    szAfterExit.indicatorGone && szAfterExit.userZoomEnabled,
+    `indicator gone = ${szAfterExit.indicatorGone}, userZoom re-enabled = ${szAfterExit.userZoomEnabled}, classes preserved = ${szAfterExit.hasPreservedClasses}`
   )
 
   // -----------------------------------------------------------------------

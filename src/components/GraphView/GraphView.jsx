@@ -10,6 +10,7 @@ import GraphControls from './GraphControls.jsx'
 import GraphLegend from './GraphLegend.jsx'
 import GraphTooltip from './GraphTooltip.jsx'
 import SZIndicator from './SZIndicator.jsx'
+import LoadMoreIndicator from './LoadMoreIndicator.jsx'
 import './GraphView.css'
 
 cytoscape.use(dagre)
@@ -39,7 +40,7 @@ export default function GraphView({ rootArtistId, onSelectArtist }) {
     cyRef, selectedNodeRef, filterLevelRef, setFilterLevel, setSemanticZoomActive, isLayoutRunningRef,
   })
 
-  const { loadArtistConnections, resetLoadedNodes } = useGraphData({
+  const { loadArtistConnections, loadMoreConnections, resetLoadedNodes, moreInfo, loadingMore, updateMoreInfo, clearMoreInfo } = useGraphData({
     cyRef, onSelectArtist,
     onNodeCountChange: setNodeCount,
     onLoadingChange: setLoading,
@@ -153,6 +154,7 @@ export default function GraphView({ rootArtistId, onSelectArtist }) {
       } else {
         applySemanticZoom(cy, nodeData.id, restoredLevel, { fit: true })
       }
+      updateMoreInfo(nodeData.id)
     })
 
     // Background tap
@@ -161,6 +163,7 @@ export default function GraphView({ rootArtistId, onSelectArtist }) {
         exitSemanticZoomKeepResults(cy)
         onSelectArtist?.(null)
         clearPathMode()
+        clearMoreInfo()
         cy.batch(() => cy.elements().removeClass('path-highlight path-start path-end path-dimmed'))
       }
     })
@@ -196,7 +199,7 @@ export default function GraphView({ rootArtistId, onSelectArtist }) {
       removeWheelHandler()
       cy.destroy()
     }
-  }, [rootArtistId, loadArtistConnections, onSelectArtist, applySemanticZoom, clearSemanticZoom, exitSemanticZoomKeepResults, activateSemanticZoom, setupZoomGuard, setupWheelHandler, szCleanup, resetLoadedNodes, handlePathNodeTap, clearPathMode])
+  }, [rootArtistId, loadArtistConnections, onSelectArtist, applySemanticZoom, clearSemanticZoom, exitSemanticZoomKeepResults, activateSemanticZoom, setupZoomGuard, setupWheelHandler, szCleanup, resetLoadedNodes, handlePathNodeTap, clearPathMode, updateMoreInfo, clearMoreInfo])
 
   return (
     <div className="graph-wrapper">
@@ -236,6 +239,8 @@ export default function GraphView({ rootArtistId, onSelectArtist }) {
       <GraphLegend activeEdgeFilter={activeEdgeFilter} onFilterEdge={handleEdgeFilter} />
 
       <GraphTooltip tooltip={tooltip} />
+
+      <LoadMoreIndicator moreInfo={moreInfo} loadingMore={loadingMore} onLoadMore={loadMoreConnections} />
 
       <div className="graph-view" ref={containerRef} />
     </div>
