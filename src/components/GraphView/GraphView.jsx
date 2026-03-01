@@ -205,7 +205,17 @@ export default function GraphView({ rootArtistId, onSelectArtist }) {
     <div className="graph-wrapper">
       {loading && (
         <div className="graph-loading">
-          <div className="graph-spinner" />
+          <div className="graph-skeleton">
+            <div className="graph-skeleton-node" />
+            <div className="graph-skeleton-line" />
+            <div className="graph-skeleton-node" />
+            <div className="graph-skeleton-line" />
+            <div className="graph-skeleton-node" />
+            <div className="graph-skeleton-line" />
+            <div className="graph-skeleton-node" />
+            <div className="graph-skeleton-line" />
+            <div className="graph-skeleton-node" />
+          </div>
           <span>{t('graph.loading')}</span>
         </div>
       )}

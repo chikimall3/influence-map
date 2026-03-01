@@ -67,8 +67,8 @@ export default function ArtistPanel({ artist, onClose, onNavigate }) {
 
       // Fetch sources for all influences
       const allInfluences = [
-        ...(influencersRes.data || []),
-        ...(influencedRes.data || []),
+        ...(influencersData || []),
+        ...(influencedData || []),
       ]
       if (allInfluences.length > 0) {
         const infIds = allInfluences.map((i) => i.id)
@@ -166,8 +166,25 @@ export default function ArtistPanel({ artist, onClose, onNavigate }) {
       )}
 
       {loadingPanel && (
-        <div className="panel-loading">
-          <div className="panel-spinner" />
+        <div className="panel-skeleton">
+          <div className="panel-section">
+            <div className="skeleton-section-header" />
+            {[1, 2, 3, 4].map(i => (
+              <div key={i} className="skeleton-item">
+                <div className="skeleton-name" />
+                <div className="skeleton-meta" />
+              </div>
+            ))}
+          </div>
+          <div className="panel-section">
+            <div className="skeleton-section-header" />
+            {[1, 2, 3].map(i => (
+              <div key={i} className="skeleton-item">
+                <div className="skeleton-name" />
+                <div className="skeleton-meta" />
+              </div>
+            ))}
+          </div>
         </div>
       )}
 

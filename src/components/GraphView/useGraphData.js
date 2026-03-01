@@ -179,7 +179,7 @@ export function useGraphData({ cyRef, onSelectArtist, onNodeCountChange, onLoadi
         const node = cy.getElementById(artistId)
         if (node.length) node.data('hasChildren', false)
 
-        const layoutOpts = skipLayoutAnim ? { ...LAYOUT_OPTIONS, animate: false } : LAYOUT_OPTIONS
+        const layoutOpts = (skipLayoutAnim || isRoot) ? { ...LAYOUT_OPTIONS, animate: false } : LAYOUT_OPTIONS
         const layout = cy.layout(layoutOpts)
         isLayoutRunningRef.current = true
         layout.on('layoutstop', () => {
